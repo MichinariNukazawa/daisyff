@@ -1,5 +1,6 @@
 
 APP=./daisyf.exe
+CFLAGS := -lm
 
 .PHONY: all run clean
 
@@ -9,7 +10,7 @@ run: $(APP)
 	$(APP) daisy-min.otf
 
 $(APP): src/main.c
-	gcc $< -o $(APP)
+	gcc $< $(CFLAGS) -o $(APP)
 
 clean:
 	rm -rf $(APP) *.otf

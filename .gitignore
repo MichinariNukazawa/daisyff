@@ -2,6 +2,9 @@
 *.otf
 *.exe
 
+*.d
+*.o
+
 *.swp
 
 /work
