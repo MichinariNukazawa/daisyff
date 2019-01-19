@@ -12,3 +12,6 @@
 /gabage
 /log
 
+#
+*.ttx
+
