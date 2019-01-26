@@ -1,6 +1,7 @@
 
 APP=./daisyf.exe
 CFLAGS := -lm
+INCLUDE		:= -I./
 
 .PHONY: all run clean
 
@@ -14,7 +15,7 @@ com:
 	ttx daisy-min.otf
 
 $(APP): src/main.c
-	gcc $< $(CFLAGS) -o $(APP)
+	gcc $< $(CFLAGS) $(INCLUDE) -o $(APP)
 
 clean:
 	rm -rf $(APP) *.otf
