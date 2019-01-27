@@ -12,6 +12,10 @@
 /gabage
 /log
 
+/.vscode
+
+/*-book
+
 #
 *.ttx
 
