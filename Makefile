@@ -1,14 +1,18 @@
 
 APP=./daisyf.exe
-CFLAGS := -lm
+CFLAGS		:= -std=c11 -lm
 INCLUDE		:= -I./
 
-.PHONY: all run clean
+.PHONY: all run test clean
 
 all: run
 
 run: $(APP)
 	$(APP) daisy-min.otf
+
+test: test/test.c
+	gcc $< $(CFLAGS) $(INCLUDE) -o ./test.exe
+	./test.exe
 
 com:
 	file daisy-min.otf

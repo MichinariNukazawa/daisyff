@@ -7,8 +7,11 @@
 #ifndef DAISYFF_OPEN_TYPE_HPP_
 #define DAISYFF_OPEN_TYPE_HPP_
 
+// strptime()のために先頭に置く
 #define _XOPEN_SOURCE
 #include <time.h>
+
+#include <stdlib.h>
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -102,23 +105,38 @@ Fixed Fixed_generate(uint8_t major, uint8_t minor)
 
 time_t timeFromStr(const char *time_details)
 {
-	struct tm tm_;
-	memset(&tm_, 0, sizeof(struct tm));
-	char *r = strptime(time_details, "%Y-%m-%dT%H:%M:%S%z", &tm_);
-	ASSERT(NULL != r); // 全部変換されたら末尾のヌルバイトが返る
-	//ASSERT('\0' == *r);
-	return mktime(&tm_);
+	struct tm tm;
+	memset(&tm, 0, sizeof(struct tm));
+	//! ex. "2016-09-14T14:46:13+00:00"
+	char *r = strptime(time_details, "%Y-%m-%dT%H:%M:%S%z", &tm);
+	// 全部変換されたら末尾のヌルバイトが返る
+	ASSERT(NULL != r);
+	ASSERT('\0' == *r);
+	//{
+	//	char buf[255];
+	//	strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S%z", &tm);
+	//	DEBUG_LOG("`%s` m:%d,d:%d,H:%d,M:%d UNIX time:%ld `%s`", // mtの月は 0-11 表現
+	//		time_details, tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min,
+	//		mktime(&tm), buf);
+	//}
+	/** mktime()でUTC時間を渡すために、TZ環境変数をUTCにセットする。戻す処理は省略。
+	https://linuxjm.osdn.jp/html/LDP_man-pages/man3/timegm.3.html */
+	putenv("TZ="); //!< `warning: implicit declaration of function ‘setenv’;`を避ける。
+	tzset();
+	time_t time = mktime(&tm);
+	ASSERT(-1 != time);
+	return time;
 }
 
 LONGDATETIME LONGDATETIME_generate(time_t time)
 {
 	/**
 	Unixエポック: UNIX時間（1970年1月1日 UTC(協定世界時)0時00分00秒
-		date --date "19700101 00:00:00+0" +%s // 0
+		date --date "1970-01-01T00:00:00+00:00" +%s // 0
 	LONGDATETIME: 12:00 midnight, January 1, 1904
-		date --date "19040101 12:00:00+0" +%s // -2082801600
+		date --date "1904-01-01T00:00:00+00:00" +%s // -2082844800
 	 */
-	const uint64_t LONGDATETIME_DELTA = 2082801600;
+	const uint64_t LONGDATETIME_DELTA = 2082844800;
 	//! @todo INT64_MAXを超えるかチェックしていない
 	LONGDATETIME t = (LONGDATETIME)((uint64_t)time + LONGDATETIME_DELTA);
 	return t;
