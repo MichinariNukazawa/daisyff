@@ -157,7 +157,10 @@ enum HeadTableFlagsElement_Bit{
 	HeadTableFlagsElement_Bit5_isRegardingInApplePlatform		= (0x1 << 5),
 	//! Bits 6–10: These bits are not used in Opentype and should always be cleared. // 0固定
 	HeadTableFlagsElement_Bit11_isLosslessCompress			= (0x1 << 11),
-	//! MS SPECに"Font converted"としか書いていないため不明 とりあずON(1)?
+	/** MSSPECに"Font converted"としか書いていないため不明。
+	  AppleSPECにはAdobe定義と書いてあってリンク切れしてる。
+	  とりあずNotoに習ってON(1)
+	  */
 	HeadTableFlagsElement_Bit12_isFontConverted			= (0x1 << 12),
 	//! ClearType(アンチエイリアシング) // bitmapフォント等で無効にする場合が有る
 	HeadTableFlagsElement_Bit13_isClearType				= (0x1 << 13),
@@ -258,15 +261,6 @@ bool HeadTable_init(
 		.glyphDataFormat	= htons(0),	// 0固定
 	};
 	*headTable_ = headTable;
-
-	return true;
-}
-
-//! @notice headTable and data arguments is no strict alias
-bool HeadTable_CalcCheckSumAdjustmentElement(const uint8_t *data_, size_t dataSize_)
-{
-	const uint32_t *data = (const uint32_t *)data_;
-	size_t dataSize = dataSize_ / 4;
 
 	return true;
 }
