@@ -16,8 +16,11 @@ int main(int argc, char **argv)
 	}
 
 	/**
+	CFF(OpenType)(MSSPEC)の要求する以下の必須テーブルを作成していく。
+	cmap, head, hhea, hmtx, maxp, name, OS/2, post
 	TrueType・CFF共通の必須テーブル
-	cmap, head, hhea, hmtx, maxp, name, OS/2
+	TrueType(AppleSPEC)
+	cmap, glyph, head, hhea, hmtx, maxp, loca, maxp, name, post
 	を作成していく。
 	*/
 
