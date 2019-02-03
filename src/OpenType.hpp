@@ -309,9 +309,9 @@ bool OffsetTable_init(OffsetTable *offsetTable_, uint32 sfntVersion, int numTabl
 	OffsetTable offsetTable = {
 		.sfntVersion		= htonl(sfntVersion),
 		.numTables		= htons(numTables_),
-		.searchRange		= htons(numTables_ * 16);
-		.entrySelector		= htons((uint16)log2(numTables_));
-		.rangeShift		= htons((numTables_ * 16) - offsetTable.searchRange);
+		.searchRange		= htons(numTables_ * 16),
+		.entrySelector		= htons((uint16)log2(numTables_)),
+		.rangeShift		= htons((numTables_ * 16) - offsetTable.searchRange),
 	};
 
 	*offsetTable_ = offsetTable;
