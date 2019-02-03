@@ -4,7 +4,7 @@
   @details license: MIT
  */
 
-#include "src/OpenType.hpp"
+#include "src/OpenType.h"
 
 int main(int argc, char **argv)
 {

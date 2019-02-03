@@ -18,9 +18,10 @@ com:
 	file daisy-min.otf
 	ttx daisy-min.otf
 
-$(APP): src/main.c
+$(APP): src/main.c src/*.h
 	gcc $< $(CFLAGS) $(INCLUDE) -o $(APP)
 
 clean:
 	rm -rf $(APP) *.otf
+	rm -rf *.d
 
