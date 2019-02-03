@@ -14,6 +14,7 @@ int main(int argc, char **argv)
 	if(argc < 2){
 		return 1;
 	}
+	const char *fontname = argv[1];
 
 	/**
 	CFF(OpenType)(MSSPEC)の要求する以下の必須テーブルを作成していく。
@@ -120,7 +121,10 @@ int main(int argc, char **argv)
 	/**
 	  ファイル書き出し
 	  */
-	int fd = open(argv[1], O_CREAT|O_TRUNC|O_RDWR, 0777);
+	char *fontfilename = (char *)malloc(strlen(fontname) + 5);
+	ASSERT(fontfilename);
+	sprintf(fontfilename, "%s.otf", fontname);
+	int fd = open(fontfilename, O_CREAT|O_TRUNC|O_RDWR, 0777);
 	if(-1 == fd){
 		fprintf(stderr, "open: %d %s\n", errno, strerror(errno));
 		return 1;

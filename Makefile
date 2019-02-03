@@ -8,7 +8,7 @@ INCLUDE		:= -I./
 all: run
 
 run: $(APP)
-	$(APP) daisy-min.otf
+	$(APP) daisy-min
 
 test: test/test.c
 	gcc $< $(CFLAGS) $(INCLUDE) -o ./test.exe
