@@ -1,6 +1,6 @@
 
 APP=./daisyf.exe
-CFLAGS		:= -std=c11 -lm
+CFLAGS		:= -std=c11 -lm -g
 INCLUDE		:= -I./
 
 .PHONY: all run test clean
@@ -9,6 +9,9 @@ all: run
 
 run: $(APP)
 	$(APP) daisy-min
+
+gdb: $(APP)
+	gdb --args $(APP) daisy-min
 
 test: test/test.c
 	gcc $< $(CFLAGS) $(INCLUDE) -o ./test.exe

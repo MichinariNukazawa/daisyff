@@ -48,6 +48,20 @@ int main(int argc, char **argv)
 			));
 
 	/**
+	  'name' Table
+	  */
+	NameTableBuf nameTableBuf = NameTableBuf_init(
+			"©Copyright the project daisy bell 2019",
+			fontname,
+			(MacStyle)MacStyle_Bit6_Regular,
+			"Version 1.0",
+			"project daisy bell",
+			"MichinariNukazawa",
+			"https://daisy-bell.booth.pm/",
+			"https://twitter.com/MNukazawa"
+			);
+
+	/**
 	'maxp' Table:
 	 使用グリフ数。
 	 TrueType必須Table。
@@ -67,6 +81,7 @@ int main(int argc, char **argv)
 
 	//Tablebuf_appendTable(&tableBuf, (void *)(&offsetTable), sizeof(OffsetTable));
 	Tablebuf_appendTable(&tableBuf, "head", (void *)(&headTable), sizeof(HeadTable));
+	Tablebuf_appendTable(&tableBuf, "name", (void *)(nameTableBuf.data), nameTableBuf.dataSize);
 	Tablebuf_appendTable(&tableBuf, "maxp", (void *)(&maxpTable_SixByte), sizeof(MaxpTable_SixByte));
 
 	// offsetは、Tableのフォントファイル先頭からのオフセット。先に計算しておく。

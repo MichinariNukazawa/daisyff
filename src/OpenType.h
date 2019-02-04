@@ -52,6 +52,15 @@
 		} \
 	}while(0);
 
+#define sprintf_new(res, fmt, ...) \
+	do{ \
+		ASSERT(0 < strlen(fmt)); \
+		size_t n = snprintf(NULL, 0, fmt, ## __VA_ARGS__); \
+		ASSERT(0 < n); \
+		res = (char *)malloc(n + 1); \
+		snprintf(res, n+1, fmt, ## __VA_ARGS__); \
+	}while(0);
+
 /* ********
  * FontFormat 基本データ型
  * ******** **/
@@ -285,6 +294,197 @@ bool MaxpTable_SixByte_init(MaxpTable_SixByte *maxpTable_sixByte_, unsigned int 
 	*maxpTable_sixByte_ = maxpTable_SixByte;
 
 	return true;
+}
+
+typedef uint16 Offset16;
+
+typedef struct{
+	uint16			format;
+	uint16			count;
+	Offset16		stringOffset;
+	// NameRecord[count]
+	// (Variable) string strage
+}NameTableHeader_Format0;
+
+const char *MacStyle_toStringForNameTable(MacStyle macStyle)
+{
+	if(macStyle == (MacStyle_Bit0_Italic | MacStyle_Bit5_Bold)){
+		return "bold italic";
+	}
+	if(macStyle == MacStyle_Bit0_Italic){
+		return "italic";
+	}
+	if(macStyle == MacStyle_Bit5_Bold){
+		return "bold";
+	}
+	if(macStyle == MacStyle_Bit6_Regular){
+		return "regular";
+	}
+
+	return NULL;
+}
+
+typedef struct{
+	uint16		platformID;
+	uint16		encodingID;
+	uint16		languageID;
+	uint16		nameID;
+	uint16		length;
+	Offset16	offset;
+}NameRecord_Member;
+
+typedef struct{
+	uint16			format;
+	uint16			count;
+	Offset16		stringOffset;
+	NameRecord_Member	*nameRecord;
+	uint8_t			*stringStrage;
+	size_t 			stringStrageSize;
+	uint8_t			*data;
+	size_t			dataSize;
+}NameTableBuf;
+
+enum PlatformID{
+	PlatformID_Unicode		= 0,
+};
+enum EncodingID{
+	EncodingID_Unicode_0		= 0,
+};
+typedef uint16 PlatformID;
+typedef uint16 EncodingID;
+typedef uint16 LanguageID;
+typedef uint16 NameID;
+
+uint8_t *convertNewUtf16FromUtf8(const char *stringdata)
+{
+	//! @todo ASCIIしか変換できない。(とりあえずcopyrightマークに非対応な状態)
+	uint8_t *utf16s = (uint8_t *)malloc((strlen(stringdata) * 2) + 2);
+	for(int i = 0; i < strlen(stringdata); i++){
+		utf16s[(i * 2) + 0] = 0x00;
+		utf16s[(i * 2) + 1] = stringdata[i];
+		utf16s[(i * 2) + 2] = 0x00;
+		utf16s[(i * 2) + 3] = 0x00;
+	}
+
+	return utf16s;
+}
+
+void NameTableBuf_append(
+		NameTableBuf *nameTableBuf,
+		PlatformID platformID,
+		EncodingID encodingID,
+		LanguageID languageID,
+		NameID nameID,
+		const char *stringdata)
+{
+	ASSERT(nameTableBuf);
+	ASSERT(stringdata);
+	DEBUG_LOG("nameTableBuf->count:%d nameID:%2d`%s`", nameTableBuf->count, nameID, stringdata);
+
+	// NameTable.nameRecord[]に新しいNameRecordを追加。
+	nameTableBuf->nameRecord = (NameRecord_Member *)realloc(
+			nameTableBuf->nameRecord,
+			sizeof(NameRecord_Member) * (nameTableBuf->count + 1));
+	ASSERT(nameTableBuf->nameRecord);
+	NameRecord_Member nameRecord_Member = {
+		.platformID	= htons(platformID),
+		.encodingID	= htons(encodingID),
+		.languageID	= htons(languageID),
+		.nameID		= htons(nameID),
+		.length		= htons(strlen(stringdata)),
+		.offset		= htons(nameTableBuf->stringStrageSize),
+	};
+	nameTableBuf->nameRecord[nameTableBuf->count] = nameRecord_Member;
+	(nameTableBuf->count)++;
+
+	// string strageを拡張して後ろに文字列データを追加
+	//DEBUG_LOG("%zu %zu", nameTableBuf->stringStrageSize, strlen(stringdata));
+	char *utf16s = convertNewUtf16FromUtf8(stringdata);
+	size_t newsize = nameTableBuf->stringStrageSize + (strlen(stringdata) * 2);
+	nameTableBuf->stringStrage = (uint8_t *)realloc(nameTableBuf->stringStrage, newsize);
+	ASSERT(nameTableBuf->stringStrage);
+	memcpy(&nameTableBuf->stringStrage[nameTableBuf->stringStrageSize], utf16s, strlen(stringdata) * 2);
+	nameTableBuf->stringStrageSize = newsize;
+}
+
+void NameTableBuf_generateByteData(NameTableBuf *nameTableBuf)
+{
+	ASSERT(nameTableBuf);
+	ASSERT(NULL == nameTableBuf->data); // 再実行はしない
+
+	// byte dataメモリ確保
+	size_t nameTableSize = sizeof(NameTableHeader_Format0)
+		+ (sizeof(NameRecord_Member) * nameTableBuf->count)
+		+ nameTableBuf->stringStrageSize;
+	nameTableBuf->data		= (uint8_t *)malloc(nameTableSize);
+	ASSERT(nameTableBuf->data);
+	nameTableBuf->dataSize		= nameTableSize;
+
+	size_t stringOffset = sizeof(NameTableHeader_Format0) + (sizeof(NameRecord_Member) * nameTableBuf->count);
+
+	// Table先頭部分を埋める
+	NameTableHeader_Format0 nameTableHeader_Format0 = {
+			.format		= htons(0),
+			.count		= htons(nameTableBuf->count),
+			.stringOffset	= htons(stringOffset),
+	};
+	memcpy(&nameTableBuf->data[0], &nameTableHeader_Format0, sizeof(NameTableHeader_Format0));
+
+	// NameRecord[count]
+	memcpy(&(nameTableBuf->data[sizeof(NameTableHeader_Format0)]),
+			nameTableBuf->nameRecord,
+			sizeof(NameRecord_Member) * nameTableBuf->count);
+
+	// (Variable) string strage
+	memcpy(&nameTableBuf->data[stringOffset], nameTableBuf->stringStrage, nameTableBuf->stringStrageSize);
+}
+
+NameTableBuf NameTableBuf_init(
+			const char *copyright,
+			const char *fontname,
+			MacStyle    macStyle,
+			const char *versionString,
+			const char *vendorname,
+			const char *designername,
+			const char *vendorurl,
+			const char *designerurl
+		)
+{
+	//! @todo argument validation
+
+	NameTableBuf nameTableBuf = {
+		.format			= 0,
+		.count			= 0,
+		.stringOffset		= sizeof(NameTableHeader_Format0),
+		.nameRecord		= NULL,
+		.stringStrage		= NULL,
+		.stringStrageSize	= 0,
+		.data			= NULL,
+		.dataSize		= 0,
+	};
+
+	// NameTable.NameRecord[](および.stringstrage)にNameRecord_Menberを追加。
+	const char *macStyleString = MacStyle_toStringForNameTable(macStyle);
+	ASSERT(macStyleString);
+	char *fullfontname = NULL;
+	sprintf_new(fullfontname, "%s %s", fontname, macStyleString);
+	ASSERT(fullfontname);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  0, copyright);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  1, fontname);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  2, macStyleString);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  3, fullfontname);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  4, fullfontname);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  5, versionString);
+	//NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  6, fullfontname);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  8, vendorname);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  9, designername);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0, 11, vendorurl);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0, 12, designerurl);
+
+	// NameTableのbufferからbyteデータを作成
+	NameTableBuf_generateByteData(&nameTableBuf);
+
+	return nameTableBuf;
 }
 
 typedef struct{
