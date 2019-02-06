@@ -130,7 +130,9 @@ int main(int argc, char **argv)
 		+ 0 // 'head' Tableは先頭に置くこととする。
 		+ offsetof(HeadTable, checkSumAdjustment)
 		;
-	uint32_t *checkSumAdjustmentPointer = (uint32_t *)&(tableBuf.data[checkSumAdjustmentOffset]);
+	DEBUG_LOG("checkSumAdjustment:%zu(0x%04lx) 0x%08x",
+			checkSumAdjustmentOffset, checkSumAdjustmentOffset, checkSumAdjustment);
+	uint32_t *checkSumAdjustmentPointer = (uint32_t *)&(fontData[checkSumAdjustmentOffset]);
 	*checkSumAdjustmentPointer = htonl(checkSumAdjustment);
 
 	/**

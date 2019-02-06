@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <stddef.h>
+#include <byteswap.h>
 
 #define ERROR_LOG(fmt, ...) \
 	fprintf(stderr, "error: %s()[%d]: "fmt"\n", __func__, __LINE__, ## __VA_ARGS__)
@@ -61,6 +62,22 @@
 		snprintf(res, n+1, fmt, ## __VA_ARGS__); \
 	}while(0);
 
+// http://www.math.kobe-u.ac.jp/HOME/kodama/tips-C-endian.html
+bool IS_LITTLE_ENDIAN()
+{
+        int i = 1;
+        return (bool)(*(char*)&i);
+}
+
+uint64_t htonll(uint64_t x)
+{
+	if(IS_LITTLE_ENDIAN()){
+		return bswap_64(x);
+	}else{
+		return x;
+	}
+}
+
 /* ********
  * FontFormat 基本データ型
  * ******** **/
@@ -70,7 +87,7 @@ typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint32_t tag;
 typedef uint32_t Fixed;
-typedef uint32_t LONGDATETIME;
+typedef uint64_t LONGDATETIME;
 
 /**
   */
@@ -250,15 +267,15 @@ bool HeadTable_init(
 		)
 {
 	HeadTable headTable = {
-		.majorVersion		= htonl(1),	// 1固定
-		.minorVersion		= htonl(0),	// 0固定
+		.majorVersion		= htons(1),	// 1固定
+		.minorVersion		= htons(0),	// 0固定
 		.fontRevision		= htonl(fontRevision),
 		.checkSumAdjustment	= htonl(0),	// ゼロ埋めしておき最後にCheckSumを計算する
 		.magicNumber		= htonl(0x5F0F3CF5),
 		.flags			= htons(flags),
 		.unitsPerEm		= htons(1024),
-		.created		= htonl(created),
-		.modified		= htonl(modified),
+		.created		= htonll(created),
+		.modified		= htonll(modified),
 		.xMin			= htons(bbox.xMin),
 		.yMin			= htons(bbox.yMin),
 		.xMax			= htons(bbox.xMax),
