@@ -381,7 +381,9 @@ void NameTableBuf_append(
 	ASSERT(stringdata);
 	DEBUG_LOG("nameTableBuf->count:%d nameID:%2d`%s`", nameTableBuf->count, nameID, stringdata);
 
-	// NameTable.nameRecord[]に新しいNameRecordを追加。
+	size_t utf16sSize = strlen(stringdata) * 2;
+
+	// ** NameTable.nameRecord[]に新しいNameRecordを追加。
 	nameTableBuf->nameRecord = (NameRecord_Member *)realloc(
 			nameTableBuf->nameRecord,
 			sizeof(NameRecord_Member) * (nameTableBuf->count + 1));
@@ -391,19 +393,19 @@ void NameTableBuf_append(
 		.encodingID	= htons(encodingID),
 		.languageID	= htons(languageID),
 		.nameID		= htons(nameID),
-		.length		= htons(strlen(stringdata)),
+		.length		= htons(utf16sSize),
 		.offset		= htons(nameTableBuf->stringStrageSize),
 	};
 	nameTableBuf->nameRecord[nameTableBuf->count] = nameRecord_Member;
 	(nameTableBuf->count)++;
 
-	// string strageを拡張して後ろに文字列データを追加
+	// ** string strageを拡張して後ろに文字列データを追加
 	//DEBUG_LOG("%zu %zu", nameTableBuf->stringStrageSize, strlen(stringdata));
 	char *utf16s = convertNewUtf16FromUtf8(stringdata);
-	size_t newsize = nameTableBuf->stringStrageSize + (strlen(stringdata) * 2);
+	size_t newsize = nameTableBuf->stringStrageSize + utf16sSize;
 	nameTableBuf->stringStrage = (uint8_t *)realloc(nameTableBuf->stringStrage, newsize);
 	ASSERT(nameTableBuf->stringStrage);
-	memcpy(&nameTableBuf->stringStrage[nameTableBuf->stringStrageSize], utf16s, strlen(stringdata) * 2);
+	memcpy(&nameTableBuf->stringStrage[nameTableBuf->stringStrageSize], utf16s, utf16sSize);
 	nameTableBuf->stringStrageSize = newsize;
 }
 
