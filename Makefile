@@ -1,5 +1,5 @@
 
-APP=./daisyf.exe
+APP=./daisyff.exe
 CFLAGS		:= -std=c11 -lm -g
 INCLUDE		:= -I./
 
@@ -21,7 +21,7 @@ com:
 	file daisy-min.otf
 	ttx daisy-min.otf
 
-$(APP): src/main.c src/*.h
+$(APP): src/daisyff.c src/*.h
 	gcc $< $(CFLAGS) $(INCLUDE) -o $(APP)
 
 clean:
