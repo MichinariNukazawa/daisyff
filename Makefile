@@ -1,7 +1,8 @@
 
 APP=./daisyff.exe
 CFLAGS		:= -std=c11 -lm -g
-INCLUDE		:= -I./
+INCLUDE		:= -I./ -I./include
+OBJECT_DIR		:= ./object
 
 .PHONY: all run test clean
 
@@ -16,6 +17,15 @@ gdb: $(APP)
 test: test/test.c
 	gcc $< $(CFLAGS) $(INCLUDE) -o ./test.exe
 	./test.exe
+
+dump: src/daisydump.c src/*.h include/*.h
+	mkdir -p $(OBJECT_DIR)
+	bash ./version.sh $(OBJECT_DIR)
+	gcc \
+		$< \
+		$(OBJECT_DIR)/version.c \
+		$(CFLAGS) $(INCLUDE) -o ./daisydump.exe
+	./daisydump.exe daisy-min.otf
 
 com:
 	file daisy-min.otf
