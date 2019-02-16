@@ -159,6 +159,25 @@ enum LocaTable_Kind{
 };
 typedef int LocaTable_Kind;
 
+bool copyrange(int fd, uint8_t *buf, size_t offset, size_t size)
+{
+	errno = 0;
+	off_t off = lseek(fd, offset, SEEK_SET);
+	if(-1 == off){
+		ERROR_LOG("lseek: %ld %d %s", off, errno, strerror(errno));
+		return false;
+	}
+
+	ssize_t ssize;
+	ssize = read(fd, buf, size);
+	if(ssize != size){
+		ERROR_LOG("read: %zd %d %s\n", ssize, errno, strerror(errno));
+		return false;
+	}
+
+	return true;
+}
+
 int main(int argc, char **argv)
 {
 	/**
@@ -248,17 +267,8 @@ int main(int argc, char **argv)
 	}else{
 		HeadTable headTable;
 
-		errno = 0;
-		off_t off = lseek(fd, ntohl(tableDirectory_HeadTable->offset), SEEK_SET);
-		if(-1 == off){
-			FONT_ERROR_LOG("lseek: %ld %d %s", off, errno, strerror(errno));
-			return 1;
-		}
-
-		ssize_t ssize;
-		ssize = read(fd, (void *)&headTable, sizeof(headTable));
-		if(ssize != sizeof(headTable)){
-			FONT_ERROR_LOG("read: %zd %d %s", ssize, errno, strerror(errno));
+		if(! copyrange(fd, (void *)&headTable, ntohl(tableDirectory_HeadTable->offset), sizeof(headTable))){
+			FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));
 			return 1;
 		}
 
@@ -323,17 +333,8 @@ int main(int argc, char **argv)
 		MaxpTable_Version05 maxpTable;
 		size_t tableSize = sizeof(maxpTable);
 
-		errno = 0;
-		off_t off = lseek(fd, ntohl(tableDirectory_MaxpTable->offset), SEEK_SET);
-		if(-1 == off){
-			FONT_ERROR_LOG("lseek: %ld %d %s", off, errno, strerror(errno));
-			return 1;
-		}
-
-		ssize_t ssize;
-		ssize = read(fd, (void *)&maxpTable, tableSize);
-		if(ssize != tableSize){
-			FONT_ERROR_LOG("read: %zd %d %s", ssize, errno, strerror(errno));
+		if(! copyrange(fd, (void *)&maxpTable, ntohl(tableDirectory_MaxpTable->offset), sizeof(maxpTable))){
+			FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));
 			return 1;
 		}
 
@@ -365,17 +366,8 @@ int main(int argc, char **argv)
 		size_t tableSize = locaOffsetSize * (maxpTable_Host_numGlyphs + 1);
 		uint8_t locaTable[tableSize];
 
-		errno = 0;
-		off_t off = lseek(fd, ntohl(tableDirectory_LocaTable->offset), SEEK_SET);
-		if(-1 == off){
-			FONT_ERROR_LOG("lseek: %ld %d %s", off, errno, strerror(errno));
-			return 1;
-		}
-
-		ssize_t ssize;
-		ssize = read(fd, (void *)&locaTable, tableSize);
-		if(ssize != tableSize){
-			FONT_ERROR_LOG("read: %zd %d %s", ssize, errno, strerror(errno));
+		if(! copyrange(fd, (void *)&locaTable, ntohl(tableDirectory_LocaTable->offset), sizeof(locaTable))){
+			FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));
 			return 1;
 		}
 
