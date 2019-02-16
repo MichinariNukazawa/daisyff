@@ -103,7 +103,7 @@ const char *OffsetTable_SfntVersion_ToPrintString(uint32_t sfntVersion)
 TableDirectory_Member *TableDirectory_QueryTag(TableDirectory_Member *tableDirectory, size_t numTables, tag tagvalue)
 {
 	for(int i = 0; i < numTables; i++){
-		DEBUG_LOG("%04x %04x", tableDirectory[i].tag, tagvalue);
+		//DEBUG_LOG("%04x %04x", tableDirectory[i].tag, tagvalue);
 		if(tableDirectory[i].tag == tagvalue){
 			return &tableDirectory[i];
 		}
