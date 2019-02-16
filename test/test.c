@@ -3,7 +3,7 @@
   @author michianri.nukazawa@gmail.com / project daisy bell
   @details license: MIT
  */
-#include "src/OpenType.hpp"
+#include "src/OpenType.h"
 #include <stdio.h>
 #include <inttypes.h>
 
@@ -41,7 +41,7 @@ int main()
 	//EXPECT_EQ_UINT(0x00000000D1A40DF0, LONGDATETIME_generate(timeFromStr("2015-06-15T05:06:56+00:00")));
 
 	// https://nixeneko.hatenablog.com/entry/2016/10/08/001900 (Noto Sans Regular based)
-	DEBUG_LOG("diff: %u", 0x00000000D3FF1335 - LONGDATETIME_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
+	DEBUG_LOG("diff: %16"PRIu64"", 0x00000000D3FF1335 - LONGDATETIME_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
 	EXPECT_EQ_UINT(0x00000000D3FF1335, LONGDATETIME_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
 
 	fprintf(stdout, "success.\n");
