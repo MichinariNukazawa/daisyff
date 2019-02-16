@@ -65,6 +65,7 @@ const char *TagType_ToPrintString(uint32_t tagValue)
 
 typedef uint32_t FixedType;
 
+//!< @todo ここは正直正しいのかどうかよくわからない(minorが複数桁の場合)
 char *FixedType_ToPrintString(FixedType fixedvalue)
 {
 	char *fixedstring = malloc(strlen("0000.0000") + 1);
@@ -72,7 +73,7 @@ char *FixedType_ToPrintString(FixedType fixedvalue)
 
 	uint16_t major = (uint16_t)(fixedvalue >> 16);
 	uint16_t minor = (uint16_t)(fixedvalue >>  0);
-	sprintf(fixedstring, "%u.%u", major, minor);
+	sprintf(fixedstring, "%04x.%04x", major, minor);
 
 	return fixedstring;
 }
