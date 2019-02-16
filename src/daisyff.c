@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 			);
 	ASSERT(HeadTable_init(
 			&headTable,
-			Fixed_generate(1,0),
+			0x00010000,
 			flags,
 			LONGDATETIME_generate(timeFromStr("2019-01-01T00:00:00+00:00")),
 			LONGDATETIME_generate(timeFromStr("2019-01-01T00:00:00+00:00")),

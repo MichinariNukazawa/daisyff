@@ -123,10 +123,19 @@ bool tag_init(tag *tag_, const char *tagstring)
 	return true;
 }
 
-Fixed Fixed_generate(uint8_t major, uint8_t minor)
+uint16_t Bcd4Type_ConvertHexFromDecimal(unsigned int dec)
 {
-	uint16_t fixed = (uint16_t)(major << 8) & (uint16_t)minor;
-	return (Fixed)htons(fixed);
+	ASSERT(dec <= 0xffff);
+
+	uint16_t hex = 0;
+	for(int i = 0; i < 4; i++){
+		unsigned int decv = (dec / (unsigned int)pow(10, i)) % 10;
+		uint16_t hexv = decv * ((uint16_t)0x1 << (i * 4));
+		hex += hexv;
+		//DEBUG_LOG("%u 0x%04x, 0x%04x", decv, hexv, hex);
+	}
+
+	return hex;
 }
 
 time_t timeFromStr(const char *time_details)
