@@ -67,8 +67,8 @@ int main(int argc, char **argv)
 	 TrueType必須Table。
 	*/
 	int numGlyphs = 0;
-	MaxpTable_SixByte maxpTable_SixByte;
-	ASSERT(MaxpTable_SixByte_init(&maxpTable_SixByte, numGlyphs));
+	MaxpTable_Version05 maxpTable_Version05;
+	ASSERT(MaxpTable_Version05_init(&maxpTable_Version05, numGlyphs));
 
 	/**
 	TableDiectoryを生成しつつ、Tableをバイト配列に変換して繋げていく。
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 	//Tablebuf_appendTable(&tableBuf, (void *)(&offsetTable), sizeof(OffsetTable));
 	Tablebuf_appendTable(&tableBuf, "head", (void *)(&headTable), sizeof(HeadTable));
 	Tablebuf_appendTable(&tableBuf, "name", (void *)(nameTableBuf.data), nameTableBuf.dataSize);
-	Tablebuf_appendTable(&tableBuf, "maxp", (void *)(&maxpTable_SixByte), sizeof(MaxpTable_SixByte));
+	Tablebuf_appendTable(&tableBuf, "maxp", (void *)(&maxpTable_Version05), sizeof(MaxpTable_Version05));
 
 	// offsetは、Tableのフォントファイル先頭からのオフセット。先に計算しておく。
 	const size_t offsetHeadSize = sizeof(OffsetTable) + (sizeof(TableDirectory_Member) * tableBuf.appendTableNum);

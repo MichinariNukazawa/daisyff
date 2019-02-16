@@ -294,21 +294,21 @@ bool HeadTable_init(
 typedef struct{
 	Fixed		version;
 	uint16		numGlyphs;
-}MaxpTable_SixByte;
+}MaxpTable_Version05;
 
-bool MaxpTable_SixByte_init(MaxpTable_SixByte *maxpTable_sixByte_, unsigned int numGlyphs)
+bool MaxpTable_Version05_init(MaxpTable_Version05 *maxpTable_Version05_, unsigned int numGlyphs)
 {
-	ASSERT(maxpTable_sixByte_);
+	ASSERT(maxpTable_Version05_);
 	if(0 == numGlyphs){
 		WARN_LOG("numGlyphs is zero.");
 	}
 
-	MaxpTable_SixByte maxpTable_SixByte = {
+	MaxpTable_Version05 maxpTable_Version05 = {
 		.version		= (Fixed)htonl(0x00005000),
 		.numGlyphs		= htons(numGlyphs),
 	};
 
-	*maxpTable_sixByte_ = maxpTable_SixByte;
+	*maxpTable_Version05_ = maxpTable_Version05;
 
 	return true;
 }
