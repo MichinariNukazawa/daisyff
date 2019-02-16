@@ -154,6 +154,7 @@ time_t timeFromStr(const char *time_details)
 	return time;
 }
 
+const uint64_t LONGDATETIME_DELTA = 2082844800;
 LONGDATETIME LONGDATETIME_generate(time_t time)
 {
 	/**
@@ -162,7 +163,6 @@ LONGDATETIME LONGDATETIME_generate(time_t time)
 	LONGDATETIME: 12:00 midnight, January 1, 1904
 		date --date "1904-01-01T00:00:00+00:00" +%s // -2082844800
 	 */
-	const uint64_t LONGDATETIME_DELTA = 2082844800;
 	//! @todo INT64_MAXを超えるかチェックしていない
 	LONGDATETIME t = (LONGDATETIME)((uint64_t)time + LONGDATETIME_DELTA);
 	return t;
