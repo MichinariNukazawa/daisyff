@@ -153,6 +153,12 @@ MaxpTable MaxpTable_ToHostByteOrder(MaxpTable maxpTable)
 	return maxpTable_Host;
 }
 
+enum LocaTable_Kind{
+	LocaTable_Kind_Short	= 0,
+	LocaTable_Kind_Long	= 1,
+};
+typedef int LocaTable_Kind;
+
 int main(int argc, char **argv)
 {
 	/**
@@ -230,7 +236,10 @@ int main(int argc, char **argv)
 					tableDirectory_Member_Host.length);
 		}
 	}
-	size_t numTables = offsetTable.numTables;
+
+	size_t numTables = offsetTable.numTables; // use TableDirectory
+
+	uint16_t headTable_Host_indexToLocFormat = 0; // use LocaTable from HeadTable member
 
 	// ** HeadTable
 	TableDirectory_Member *tableDirectory_HeadTable = TableDirectory_QueryTag(tableDirectory, numTables, TagType_Generate("head"));
@@ -300,7 +309,11 @@ int main(int argc, char **argv)
 			headTable_Host.indexToLocFormat	,
 			((0 == headTable_Host.indexToLocFormat) ? "short":"long"),
 			headTable_Host.glyphDataFormat	);
+
+		headTable_Host_indexToLocFormat = headTable_Host.indexToLocFormat;
 	}
+
+	size_t maxpTable_Host_numGlyphs = 0; // use LocaTable from MaxpTable member
 
 	// ** MaxpTable
 	TableDirectory_Member *tableDirectory_MaxpTable = TableDirectory_QueryTag(tableDirectory, numTables, TagType_Generate("maxp"));
@@ -338,6 +351,62 @@ int main(int argc, char **argv)
 			,
 			FixedType_ToPrintString(maxpTable_Host.version),
 			maxpTable_Host.numGlyphs);
+
+		maxpTable_Host_numGlyphs = maxpTable_Host.numGlyphs;
+	}
+
+	// ** LocaTable
+	LocaTable_Kind locaTable_Kind = ((0 == headTable_Host_indexToLocFormat) ? LocaTable_Kind_Short : LocaTable_Kind_Long);
+	TableDirectory_Member *tableDirectory_LocaTable = TableDirectory_QueryTag(tableDirectory, numTables, TagType_Generate("loca"));
+	if(NULL == tableDirectory_LocaTable){
+		FONT_WARN_LOG("LocaTable not detected.");
+	}else{
+		size_t locaOffsetSize = (locaTable_Kind == LocaTable_Kind_Short) ? sizeof(uint16_t):sizeof(uint32_t);
+		size_t tableSize = locaOffsetSize * (maxpTable_Host_numGlyphs + 1);
+		uint8_t locaTable[tableSize];
+
+		errno = 0;
+		off_t off = lseek(fd, ntohl(tableDirectory_LocaTable->offset), SEEK_SET);
+		if(-1 == off){
+			FONT_ERROR_LOG("lseek: %ld %d %s", off, errno, strerror(errno));
+			return 1;
+		}
+
+		ssize_t ssize;
+		ssize = read(fd, (void *)&locaTable, tableSize);
+		if(ssize != tableSize){
+			FONT_ERROR_LOG("read: %zd %d %s", ssize, errno, strerror(errno));
+			return 1;
+		}
+
+		// LocaTable short,long
+		fprintf(stdout, "\n");
+		fprintf(stdout,
+			"'loca' Table - Index to Location\n"
+			"--------------------------------\n");
+		for(int i = 0; i < (maxpTable_Host_numGlyphs + 1); i++){
+			uint32_t sv = 0;
+			uint32_t dv = 0;
+			if(locaTable_Kind == LocaTable_Kind_Short){
+				uint16_t shortv;
+				memcpy(&shortv, &locaTable[i * sizeof(uint16_t)], sizeof(uint16_t));
+				shortv = ntohs(shortv);
+				sv = shortv;
+				dv = shortv * 2;
+			}else{
+				uint32_t longv;
+				memcpy(&longv, &locaTable[i * sizeof(uint32_t)], sizeof(uint32_t));
+				longv = ntohl(longv);
+				sv = longv;
+				dv = longv;
+			}
+
+			if(i != maxpTable_Host_numGlyphs){
+				fprintf(stdout, "	 Idx %6d -> GlyphOffset 0x%08x(0x%08x %6u)\n", i, dv, sv, dv);
+			}else{
+				fprintf(stdout, "	                  Ended at 0x%08x(0x%08x %6u)\n", dv, sv, dv);
+			}
+		}
 	}
 
 	close(fd);
