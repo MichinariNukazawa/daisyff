@@ -25,9 +25,8 @@
 		} \
 	}while(0);
 
-int main()
+void longdatetime_test()
 {
-
 	LONGDATETIME t;
 	/*
 	// https://support.microsoft.com/ja-jp/help/214330/differences-between-the-1900-and-the-1904-date-system-in-excel
@@ -43,6 +42,12 @@ int main()
 	// https://nixeneko.hatenablog.com/entry/2016/10/08/001900 (Noto Sans Regular based)
 	DEBUG_LOG("diff: %16"PRIu64"", 0x00000000D3FF1335 - LONGDATETIME_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
 	EXPECT_EQ_UINT(0x00000000D3FF1335, LONGDATETIME_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
+}
+
+int main()
+{
+
+	longdatetime_test();
 
 	fprintf(stdout, "success.\n");
 
