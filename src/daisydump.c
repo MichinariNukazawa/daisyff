@@ -72,7 +72,7 @@ char *FixedType_ToPrintString(FixedType fixedvalue)
 
 	uint16_t major = (uint16_t)(fixedvalue >> 16);
 	uint16_t minor = (uint16_t)(fixedvalue >>  0);
-	sprintf(fixedstring, "%4d.%04d", major, minor);
+	sprintf(fixedstring, "%u.%u", major, minor);
 
 	return fixedstring;
 }
@@ -135,6 +135,21 @@ HeadTable HeadTable_ToHostByteOrder(HeadTable headTable)
 	};
 
 	return headTable_Host;
+}
+
+typedef MaxpTable_Version05 MaxpTable;
+
+MaxpTable MaxpTable_ToHostByteOrder(MaxpTable maxpTable)
+{
+	MaxpTable maxpTable_Host = {
+		.version		= ntohl(maxpTable.version	),
+		.numGlyphs		= ntohs(maxpTable.numGlyphs	),
+	};
+	if(0x00005000 != maxpTable_Host.version){
+		WARN_LOG("not implement"); //!< @todo not implement
+	}
+
+	return maxpTable_Host;
 }
 
 int main(int argc, char **argv)
@@ -284,6 +299,44 @@ int main(int argc, char **argv)
 			headTable_Host.indexToLocFormat	,
 			((0 == headTable_Host.indexToLocFormat) ? "short":"long"),
 			headTable_Host.glyphDataFormat	);
+	}
+
+	// ** MaxpTable
+	TableDirectory_Member *tableDirectory_MaxpTable = TableDirectory_QueryTag(tableDirectory, numTables, TagType_Generate("maxp"));
+	if(NULL == tableDirectory_MaxpTable){
+		FONT_WARN_LOG("MaxpTable not detected.");
+	}else{
+		MaxpTable_Version05 maxpTable;
+		size_t tableSize = sizeof(maxpTable);
+
+		errno = 0;
+		off_t off = lseek(fd, ntohl(tableDirectory_MaxpTable->offset), SEEK_SET);
+		if(-1 == off){
+			FONT_ERROR_LOG("lseek: %ld %d %s", off, errno, strerror(errno));
+			return 1;
+		}
+
+		ssize_t ssize;
+		ssize = read(fd, (void *)&maxpTable, tableSize);
+		if(ssize != tableSize){
+			FONT_ERROR_LOG("read: %zd %d %s", ssize, errno, strerror(errno));
+			return 1;
+		}
+
+		// MaxpTable Version 0.5
+		MaxpTable_Version05 maxpTable_Host = MaxpTable_ToHostByteOrder(maxpTable);
+		if(0x00005000 != maxpTable_Host.version){
+			FONT_WARN_LOG("not implement or invalid version 0x%08x", maxpTable_Host.version);
+		}
+		fprintf(stdout, "\n");
+		fprintf(stdout,
+			"'maxp' Table - Maximum Profile\n"
+			"------------------------------\n"
+			"	 'maxp' version:	 %s\n"
+			"	 numGlyphs:		 %d\n"
+			,
+			FixedType_ToPrintString(maxpTable_Host.version),
+			maxpTable_Host.numGlyphs);
 	}
 
 	close(fd);
