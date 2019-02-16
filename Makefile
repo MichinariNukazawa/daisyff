@@ -5,11 +5,12 @@ INCLUDE		:= -I./ -I./include
 OBJECT_DIR		:= ./object
 
 .PHONY: all run test clean
-
-all: run
+.PHONY: dump com
 
 run: $(APP)
 	$(APP) daisy-min
+
+all: run dump
 
 gdb: $(APP)
 	gdb --args $(APP) daisy-min
