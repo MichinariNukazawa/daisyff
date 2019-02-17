@@ -159,6 +159,63 @@ enum LocaTable_Kind{
 };
 typedef int LocaTable_Kind;
 
+char *GlyphDiscriptionFlag_ToPrintString(uint8_t flag)
+{
+	char *str = malloc(512);
+	snprintf(str, 512,
+		"%-7s %-7s %-7s %-7s %-7s %-7s %-9s",
+		(0 != (flag & (1 << 6))) ? "Overlap":"",
+		(0 != (flag & (1 << 5))) ? "YDual":"",
+		(0 != (flag & (1 << 4))) ? "XDual":"",
+		(0 != (flag & (1 << 3))) ? "Repeat":"",
+		(0 != (flag & (1 << 2))) ? "Y-Short":"",
+		(0 != (flag & (1 << 1))) ? "X-Short":"",
+		(0 != (flag & (1 << 0))) ? "OnCurve":"OffCurve" // ttfdumpのOn/Offはこれの模様。
+		);
+
+	return str;
+}
+
+typedef struct{
+	uint16_t x;
+	uint16_t y;
+}RawPoint;
+
+typedef struct{
+	int x;
+	int y;
+}Point;
+
+typedef struct{
+	int		isFlagRepeated;
+	uint8_t		flag;
+	int		isRelXSame;
+	int		isRelYSame;
+	RawPoint	raw;
+	Point		rel;
+	Point		abs;
+}GlyphDiscriptionPoint;
+
+bool GlyphFlag_IsXShortVector(uint8_t flag)
+{
+	return (0 != (flag & (0x1 << 1)));
+}
+
+bool GlyphFlag_IsSameOrPisitiveXShortVector(uint8_t flag)
+{
+	return (0 != (flag & (0x1 << 4)));
+}
+
+bool GlyphFlag_IsYShortVector(uint8_t flag)
+{
+	return (0 != (flag & (0x1 << 2)));
+}
+
+bool GlyphFlag_IsSameOrPisitiveYShortVector(uint8_t flag)
+{
+	return (0 != (flag & (0x1 << 5)));
+}
+
 bool copyrange(int fd, uint8_t *buf, size_t offset, size_t size)
 {
 	errno = 0;
@@ -176,6 +233,18 @@ bool copyrange(int fd, uint8_t *buf, size_t offset, size_t size)
 	}
 
 	return true;
+}
+
+void dump0(uint8_t *buf, size_t size)
+{
+	fprintf(stdout, " 0x ");
+	for(int i = 0; i < size; i++){
+		if((0 != i) && (0 == (i % 8))){
+			fprintf(stdout, "\n");
+		}
+		fprintf(stdout, "%02x-", buf[i]);
+	}
+	fprintf(stdout, "\n");
 }
 
 int main(int argc, char **argv)
@@ -356,6 +425,8 @@ int main(int argc, char **argv)
 		maxpTable_Host_numGlyphs = maxpTable_Host.numGlyphs;
 	}
 
+	uint32_t *locaList = NULL; // use GlyfTable from LocaTable
+
 	// ** LocaTable
 	LocaTable_Kind locaTable_Kind = ((0 == headTable_Host_indexToLocFormat) ? LocaTable_Kind_Short : LocaTable_Kind_Long);
 	TableDirectory_Member *tableDirectory_LocaTable = TableDirectory_QueryTag(tableDirectory, numTables, TagType_Generate("loca"));
@@ -393,10 +464,265 @@ int main(int argc, char **argv)
 				dv = longv;
 			}
 
+			locaList = (uint32_t *)realloc(locaList, sizeof(uint32_t) * (i + 1));
+			ASSERT(locaList);
+			locaList[i] = dv;
+
 			if(i != maxpTable_Host_numGlyphs){
 				fprintf(stdout, "	 Idx %6d -> GlyphOffset 0x%08x(0x%08x %6u)\n", i, dv, sv, dv);
 			}else{
 				fprintf(stdout, "	                  Ended at 0x%08x(0x%08x %6u)\n", dv, sv, dv);
+			}
+		}
+	}
+
+	// ** GlyfTable
+	TableDirectory_Member *tableDirectory_GlyfTable = TableDirectory_QueryTag(tableDirectory, numTables, TagType_Generate("glyf"));
+	if(NULL == tableDirectory_GlyfTable){
+		FONT_WARN_LOG("GlyfTable not detected.");
+	}else{
+		fprintf(stdout, "\n");
+		fprintf(stdout,
+			"'glyf' Table - Glyph Data\n"
+			"-------------------------\n");
+
+		for(int glyphId = 0; glyphId< maxpTable_Host_numGlyphs; glyphId++){
+			size_t offsetOnTable = locaList[glyphId];
+			size_t datasize = locaList[glyphId + 1] - locaList[glyphId];
+
+			// *** GlyphDiscription.Header
+			GlyphDiscriptionHeader glyphDiscriptionHeader;
+			if(! copyrange(fd, (void *)&glyphDiscriptionHeader, ntohl(tableDirectory_GlyfTable->offset) + offsetOnTable, sizeof(GlyphDiscriptionHeader))){
+				FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));
+				return 1;
+			}
+
+			GlyphDiscriptionHeader glyphDiscriptionHeader_Host = {
+				.numberOfContours	= ntohs(glyphDiscriptionHeader.numberOfContours		),
+				.xMin			= ntohs(glyphDiscriptionHeader.xMin			),
+				.yMin			= ntohs(glyphDiscriptionHeader.yMin			),
+				.xMax			= ntohs(glyphDiscriptionHeader.xMax			),
+				.yMax			= ntohs(glyphDiscriptionHeader.yMax			),
+			};
+			fprintf(stdout, "\n");
+			fprintf(stdout,
+				"Glyph %6d.\n"
+				"	 numberOfContours:	 %4d\n"
+				"	 xMin:			 %4d\n"
+				"	 yMin:			 %4d\n"
+				"	 xMax:			 %4d\n"
+				"	 yMax:			 %4d\n"
+				,
+				glyphId,
+				glyphDiscriptionHeader_Host.numberOfContours	,
+				glyphDiscriptionHeader_Host.xMin		,
+				glyphDiscriptionHeader_Host.yMin		,
+				glyphDiscriptionHeader_Host.xMax		,
+				glyphDiscriptionHeader_Host.yMax		);
+
+			if(0 == datasize){
+				fprintf(stdout, "	 skip datasize is zero.\n");
+				continue;
+			}
+			//! @todo check GlyphDiscription elemetns on memory data range.
+
+			uint8_t *gdata = malloc(datasize);
+			if(! copyrange(fd, gdata, ntohl(tableDirectory_GlyfTable->offset) + offsetOnTable, datasize)){
+				FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));
+				return 1;
+			}
+
+			//dump0(gdata, sizeof(GlyphDiscriptionHeader));
+			//dump0(&gdata[sizeof(GlyphDiscriptionHeader)], 8);
+
+			size_t pointNum = 0; //! @todo use flags from EndPoints?
+
+			// *** GlyphDiscription.EndPoints
+			fprintf(stdout, "\n");
+			fprintf(stdout,
+				"	 EndPoints\n"
+				"	 ---------\n");
+			for(int co = 0; co < glyphDiscriptionHeader_Host.numberOfContours; co++){
+				uint16_t *p = (uint16_t *)&gdata[sizeof(GlyphDiscriptionHeader) + (co * sizeof(uint16_t))];
+				uint16_t v = *p;
+				uint16_t endPtsOfContour = ntohs(v);
+				fprintf(stdout, "	 %2d: %2d\n", co, endPtsOfContour);
+
+				pointNum = endPtsOfContour + 1;
+			}
+
+			size_t offsetInTable;
+
+			// *** GlyphDiscription.LengthOfInstructions
+			offsetInTable = sizeof(GlyphDiscriptionHeader) + (glyphDiscriptionHeader_Host.numberOfContours * sizeof(uint16_t));
+			uint16_t *p = (uint16_t *)&gdata[offsetInTable];
+			uint16_t v = *p;
+			uint16_t instructionLength = ntohs(v);
+			fprintf(stdout, "\n");
+			fprintf(stdout, "	 Length of Instructions: %2d\n", instructionLength);
+
+			offsetInTable += sizeof(uint16_t);
+			for(int inst = 0; inst < instructionLength; inst++){
+				uint8_t instruction = gdata[offsetInTable];
+				fprintf(stdout, "\n");
+				fprintf(stdout, "	 Instruction[%02d]: 0x%02x\n", inst, instruction);
+				offsetInTable += sizeof(uint8_t);
+			}
+
+			GlyphDiscriptionPoint *gpoints = malloc(pointNum * sizeof(GlyphDiscriptionPoint));
+			ASSERT(gpoints);
+			memset(gpoints, 0, (pointNum * sizeof(GlyphDiscriptionPoint)));
+
+			// *** GlyphDiscription.Flags
+			fprintf(stdout, "\n");
+			fprintf(stdout,
+				"	 Flags (pointNum:%2zd)\n"
+				"	 -----\n",
+				pointNum);
+
+			for(int iflag = 0; iflag < pointNum; iflag++){
+				uint8_t flag = gdata[offsetInTable];
+				gpoints[iflag].flag = flag;
+				fprintf(stdout, "	 flag %2d: %s 0x%02x\n", iflag, GlyphDiscriptionFlag_ToPrintString(flag), flag);
+				if(0 != (flag & (1 << 3))){
+					offsetInTable += sizeof(uint8_t);
+					uint8_t repeatNum = gdata[offsetInTable];
+					for(int rep = 0; rep < repeatNum; rep++){
+						iflag++;
+						//offsetInTable += sizeof(uint8_t);
+						gpoints[iflag].isFlagRepeated = 1;
+						gpoints[iflag].flag = flag;
+						fprintf(stdout, "	 flag %2d: <repeated(%02d/%02d 0x%02x)>\n", iflag, rep, repeatNum, repeatNum);
+					}
+				}
+				offsetInTable += sizeof(uint8_t);
+			}
+
+			for(int iflag = 0; iflag < pointNum; iflag++){
+				bool isRepeated = (0 != gpoints[iflag].isFlagRepeated);
+				uint8_t flag = gpoints[iflag].flag;
+				fprintf(stdout, ">	 flag %2d: %s 0x%02x %s\n",
+						iflag, GlyphDiscriptionFlag_ToPrintString(flag), flag, (isRepeated?"<repeated>":""));
+			}
+
+			dump0(&gdata[offsetInTable], 8);
+
+			// *** GlyphDiscription.XYCoordinates
+			fprintf(stdout, "\n");
+			fprintf(stdout,
+				"	 Coordinates\n"
+				"	 -----------\n");
+			// xCoordinates
+			for(int xcor = 0; xcor < pointNum; xcor++){
+				uint8_t flag = gpoints[xcor].flag;
+				if((! GlyphFlag_IsXShortVector(flag)) && GlyphFlag_IsSameOrPisitiveXShortVector(flag)){
+					gpoints[xcor].isRelXSame = 1;
+					if(0 == xcor){
+						//! @note 先頭の場合はゼロ(FontForgeの生成したフォントファイルによるとありうるらしい。)
+						continue;
+					}
+					gpoints[xcor].raw.x = 0; //gpoints[xcor - 1].raw.x;
+					gpoints[xcor].rel.x = 0; //gpoints[xcor - 1].rel.x;
+					gpoints[xcor].abs.x = gpoints[xcor - 1].abs.x;
+				}else{
+					uint16_t raw;
+					int v;
+					if(GlyphFlag_IsXShortVector(flag)){
+						raw = *(uint8_t *)(&gdata[offsetInTable]);
+						v = raw;
+						offsetInTable += sizeof(uint8_t);
+					}else{
+						raw = ntohs(*(uint16_t *)(&gdata[offsetInTable]));
+						//int16_t vv;
+						//memcpy((void*)&vv, (void*)&raw, sizeof(int16_t));
+						//v = vv;
+						v = raw * -1; //! @todo @note ttxdump合わせなのだけれど理由がわからない
+						offsetInTable += sizeof(uint16_t);
+					}
+					int rel = v;
+					if(GlyphFlag_IsXShortVector(flag) && GlyphFlag_IsSameOrPisitiveXShortVector(flag)){
+						rel *= +1;
+					}else{
+						rel *= -1;
+					}
+					int prev = (0 == xcor)? 0:gpoints[xcor - 1].abs.x;
+					gpoints[xcor].raw.x = raw;
+					gpoints[xcor].rel.x = rel;
+					gpoints[xcor].abs.x = prev + rel;
+				}
+			}
+
+			// yCoordinates
+			for(int ycor = 0; ycor < pointNum; ycor++){
+				uint8_t flag = gpoints[ycor].flag;
+				if((! GlyphFlag_IsYShortVector(flag)) && GlyphFlag_IsSameOrPisitiveYShortVector(flag)){
+					gpoints[ycor].isRelYSame = 1;
+					if(0 == ycor){
+						continue;
+					}
+					gpoints[ycor].raw.y = 0; //gpoints[ycor - 1].raw.y;
+					gpoints[ycor].rel.y = 0; //gpoints[ycor - 1].rel.y;
+					gpoints[ycor].abs.y = gpoints[ycor - 1].abs.y;
+				}else{
+					uint16_t raw;
+					int16_t v;
+					if(GlyphFlag_IsYShortVector(flag)){
+						raw = *(uint8_t *)(&gdata[offsetInTable]);
+						v = raw;
+						offsetInTable += sizeof(uint8_t);
+					}else{
+						/*
+						uint8_t rawx[2];
+						memcpy((void*)rawx, (void*)(&gdata[offsetInTable]), sizeof(int16_t));
+						//raw = ntohs(rawx);
+						raw = (int16_t)(((uint16_t)rawx[0] << 8) | (uint16_t)rawx[1]);
+						int16_t vv;
+						memcpy((void*)(&vv), (void*)(&raw), sizeof(uint16_t));
+						v = vv;
+						v = raw * -1;
+						*/
+						//DEBUG_LOG("%04x %04x %d %d", raw, rawx, vv, v);
+						//memcpy((void*)&v, (void*)(&gdata[offsetInTable]), sizeof(int16_t));
+						raw = ntohs(*(uint16_t *)(&gdata[offsetInTable]));
+						v = raw * -1; //! @todo @note ttxdump合わせなのだけれど理由がわからない
+						//int16_t vv;
+						//memcpy((void*)&vv, (void*)&raw, sizeof(int16_t));
+						//v = vv;
+						//v = raw * -1; //! @todo @note ttxdump合わせなのだけれど理由がわからない
+						offsetInTable += sizeof(uint16_t);
+					}
+					int rel = v;
+					if(GlyphFlag_IsYShortVector(flag) && GlyphFlag_IsSameOrPisitiveYShortVector(flag)){
+						rel *= +1;
+					}else{
+						rel *= -1;
+					}
+					int prev = (0 == ycor)? 0:gpoints[ycor - 1].abs.y;
+					gpoints[ycor].raw.y = raw;
+					gpoints[ycor].rel.y = rel;
+					gpoints[ycor].abs.y = prev + rel;
+				}
+			}
+
+			// print
+			for(int cor = 0; cor < pointNum; cor++){
+				uint8_t flag = gpoints[cor].flag;
+				fprintf(stdout,
+					"	 %2d Rel ( %6d, %6d) -> Abs ( %6d, %6d) | Raw ( %c%c0x%04x %6d, %c%c0x%04x %6d)\n"
+					,
+					cor,
+					gpoints[cor].rel.x,
+					gpoints[cor].rel.y,
+					gpoints[cor].abs.x,
+					gpoints[cor].abs.y,
+					(GlyphFlag_IsXShortVector(flag)? 'S':'L'),
+					((1 == gpoints[cor].isRelXSame)? 'X':'-'),
+					gpoints[cor].raw.x,
+					gpoints[cor].raw.x,
+					(GlyphFlag_IsYShortVector(flag)? 'S':'L'),
+					((1 == gpoints[cor].isRelYSame)? 'X':'-'),
+					gpoints[cor].raw.y,
+					gpoints[cor].raw.y);
 			}
 		}
 	}
