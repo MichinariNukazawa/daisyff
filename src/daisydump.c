@@ -533,15 +533,17 @@ int main(int argc, char **argv)
 			}
 
 			//dump0(gdata, sizeof(GlyphDiscriptionHeader));
-			//dump0(&gdata[sizeof(GlyphDiscriptionHeader)], 8);
+			//dump0(&gdata[sizeof(GlyphDiscriptionHeader)], 16);
 
 			size_t pointNum = 0; //! @todo use flags from EndPoints?
 
 			// *** GlyphDiscription.EndPoints
 			fprintf(stdout, "\n");
 			fprintf(stdout,
-				"	 EndPoints\n"
-				"	 ---------\n");
+				"	 EndPoints (%d)\n"
+				"	 ---------\n",
+				glyphDiscriptionHeader_Host.numberOfContours
+				);
 			for(int co = 0; co < glyphDiscriptionHeader_Host.numberOfContours; co++){
 				uint16_t *p = (uint16_t *)&gdata[sizeof(GlyphDiscriptionHeader) + (co * sizeof(uint16_t))];
 				uint16_t v = *p;
@@ -563,8 +565,10 @@ int main(int argc, char **argv)
 
 			offsetInTable += sizeof(uint16_t);
 			for(int inst = 0; inst < instructionLength; inst++){
+				ASSERTF(offsetInTable < ntohl(tableDirectory_GlyfTable->length),
+						"%d", ntohl(tableDirectory_GlyfTable->length));
+
 				uint8_t instruction = gdata[offsetInTable];
-				fprintf(stdout, "\n");
 				fprintf(stdout, "	 Instruction[%02d]: 0x%02x\n", inst, instruction);
 				offsetInTable += sizeof(uint8_t);
 			}
@@ -592,7 +596,7 @@ int main(int argc, char **argv)
 						//offsetInTable += sizeof(uint8_t);
 						gpoints[iflag].isFlagRepeated = 1;
 						gpoints[iflag].flag = flag;
-						fprintf(stdout, "	 flag %2d: <repeated(%02d/%02d 0x%02x)>\n", iflag, rep, repeatNum, repeatNum);
+						//fprintf(stdout, ">	 flag %2d: <repeated(%02d/%02d 0x%02x)>\n", iflag, rep, repeatNum, repeatNum);
 					}
 				}
 				offsetInTable += sizeof(uint8_t);
@@ -601,11 +605,11 @@ int main(int argc, char **argv)
 			for(int iflag = 0; iflag < pointNum; iflag++){
 				bool isRepeated = (0 != gpoints[iflag].isFlagRepeated);
 				uint8_t flag = gpoints[iflag].flag;
-				fprintf(stdout, ">	 flag %2d: %s 0x%02x %s\n",
+				fprintf(stdout, "	 flag %2d: %s 0x%02x %s\n",
 						iflag, GlyphDiscriptionFlag_ToPrintString(flag), flag, (isRepeated?"<repeated>":""));
 			}
 
-			dump0(&gdata[offsetInTable], 8);
+			//dump0(&gdata[offsetInTable], 8);
 
 			// *** GlyphDiscription.XYCoordinates
 			fprintf(stdout, "\n");
