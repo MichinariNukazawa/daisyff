@@ -516,6 +516,14 @@ NameTableBuf NameTableBuf_init(
 }
 
 typedef struct{
+	int16 numberOfContours;
+	int16 xMin;
+	int16 yMin;
+	int16 xMax;
+	int16 yMax;
+}GlyphDiscriptionHeader;
+
+typedef struct{
 	uint32		sfntVersion;
 	uint16		numTables;
 	uint16		searchRange;
