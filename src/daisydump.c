@@ -159,7 +159,7 @@ enum LocaTable_Kind{
 };
 typedef int LocaTable_Kind;
 
-char *GlyphDiscriptionFlag_ToPrintString(uint8_t flag)
+char *GlyphDescriptionFlag_ToPrintString(uint8_t flag)
 {
 	char *str = malloc(512);
 	snprintf(str, 512,
@@ -194,7 +194,7 @@ typedef struct{
 	RawPoint	raw;
 	Point		rel;
 	Point		abs;
-}GlyphDiscriptionPoint;
+}GlyphDescriptionPoint;
 
 bool GlyphFlag_IsXShortVector(uint8_t flag)
 {
@@ -490,19 +490,19 @@ int main(int argc, char **argv)
 			size_t offsetOnTable = locaList[glyphId];
 			size_t datasize = locaList[glyphId + 1] - locaList[glyphId];
 
-			// *** GlyphDiscription.Header
-			GlyphDiscriptionHeader glyphDiscriptionHeader;
-			if(! copyrange(fd, (void *)&glyphDiscriptionHeader, ntohl(tableDirectory_GlyfTable->offset) + offsetOnTable, sizeof(GlyphDiscriptionHeader))){
+			// *** GlyphDescription.Header
+			GlyphDescriptionHeader glyphDescriptionHeader;
+			if(! copyrange(fd, (void *)&glyphDescriptionHeader, ntohl(tableDirectory_GlyfTable->offset) + offsetOnTable, sizeof(GlyphDescriptionHeader))){
 				FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));
 				return 1;
 			}
 
-			GlyphDiscriptionHeader glyphDiscriptionHeader_Host = {
-				.numberOfContours	= ntohs(glyphDiscriptionHeader.numberOfContours		),
-				.xMin			= ntohs(glyphDiscriptionHeader.xMin			),
-				.yMin			= ntohs(glyphDiscriptionHeader.yMin			),
-				.xMax			= ntohs(glyphDiscriptionHeader.xMax			),
-				.yMax			= ntohs(glyphDiscriptionHeader.yMax			),
+			GlyphDescriptionHeader glyphDescriptionHeader_Host = {
+				.numberOfContours	= ntohs(glyphDescriptionHeader.numberOfContours		),
+				.xMin			= ntohs(glyphDescriptionHeader.xMin			),
+				.yMin			= ntohs(glyphDescriptionHeader.yMin			),
+				.xMax			= ntohs(glyphDescriptionHeader.xMax			),
+				.yMax			= ntohs(glyphDescriptionHeader.yMax			),
 			};
 			fprintf(stdout, "\n");
 			fprintf(stdout,
@@ -514,23 +514,23 @@ int main(int argc, char **argv)
 				"	 yMax:			 %4d\n"
 				,
 				glyphId,
-				glyphDiscriptionHeader_Host.numberOfContours	,
-				glyphDiscriptionHeader_Host.xMin		,
-				glyphDiscriptionHeader_Host.yMin		,
-				glyphDiscriptionHeader_Host.xMax		,
-				glyphDiscriptionHeader_Host.yMax		);
+				glyphDescriptionHeader_Host.numberOfContours	,
+				glyphDescriptionHeader_Host.xMin		,
+				glyphDescriptionHeader_Host.yMin		,
+				glyphDescriptionHeader_Host.xMax		,
+				glyphDescriptionHeader_Host.yMax		);
 
 			if(0 == datasize){
 				fprintf(stdout, "	 skip datasize is zero.\n");
 				continue;
 			}
 
-			if(0 > glyphDiscriptionHeader_Host.numberOfContours){
+			if(0 > glyphDescriptionHeader_Host.numberOfContours){
 				fprintf(stdout, "	 skip CompositeGlyphDescription not implement.\n"); //!< @todo not implement.
 				continue;
 			}
 
-			//! @todo check GlyphDiscription elemetns on memory data range.
+			//! @todo check GlyphDescription elemetns on memory data range.
 
 			uint8_t *gdata = malloc(datasize);
 			if(! copyrange(fd, gdata, ntohl(tableDirectory_GlyfTable->offset) + offsetOnTable, datasize)){
@@ -538,22 +538,22 @@ int main(int argc, char **argv)
 				return 1;
 			}
 
-			//dump0(gdata, sizeof(GlyphDiscriptionHeader));
-			//dump0(&gdata[sizeof(GlyphDiscriptionHeader)], 16);
+			//dump0(gdata, sizeof(GlyphDescriptionHeader));
+			//dump0(&gdata[sizeof(GlyphDescriptionHeader)], 16);
 
 			size_t pointNum = 0; //! @todo use flags from EndPoints?
 
 			size_t offsetInTable = 0;
 
-			// *** GlyphDiscription.EndPoints
-			offsetInTable += sizeof(GlyphDiscriptionHeader);
+			// *** GlyphDescription.EndPoints
+			offsetInTable += sizeof(GlyphDescriptionHeader);
 			fprintf(stdout, "\n");
 			fprintf(stdout,
 				"	 EndPoints (%d)\n"
 				"	 ---------\n",
-				glyphDiscriptionHeader_Host.numberOfContours
+				glyphDescriptionHeader_Host.numberOfContours
 				);
-			for(int co = 0; co < glyphDiscriptionHeader_Host.numberOfContours; co++){
+			for(int co = 0; co < glyphDescriptionHeader_Host.numberOfContours; co++){
 				ASSERTF(offsetInTable < ntohl(tableDirectory_GlyfTable->length),
 						"%d", ntohl(tableDirectory_GlyfTable->length));
 
@@ -566,7 +566,7 @@ int main(int argc, char **argv)
 				offsetInTable += sizeof(uint16_t);
 			}
 
-			// *** GlyphDiscription.LengthOfInstructions
+			// *** GlyphDescription.LengthOfInstructions
 			uint16_t *p = (uint16_t *)&gdata[offsetInTable];
 			uint16_t v = *p;
 			uint16_t instructionLength = ntohs(v);
@@ -583,11 +583,11 @@ int main(int argc, char **argv)
 				offsetInTable += sizeof(uint8_t);
 			}
 
-			GlyphDiscriptionPoint *gpoints = malloc(pointNum * sizeof(GlyphDiscriptionPoint));
+			GlyphDescriptionPoint *gpoints = malloc(pointNum * sizeof(GlyphDescriptionPoint));
 			ASSERT(gpoints);
-			memset(gpoints, 0, (pointNum * sizeof(GlyphDiscriptionPoint)));
+			memset(gpoints, 0, (pointNum * sizeof(GlyphDescriptionPoint)));
 
-			// *** GlyphDiscription.Flags
+			// *** GlyphDescription.Flags
 			fprintf(stdout, "\n");
 			fprintf(stdout,
 				"	 Flags (pointNum:%2zd)\n"
@@ -600,7 +600,7 @@ int main(int argc, char **argv)
 
 				uint8_t flag = gdata[offsetInTable];
 				gpoints[iflag].flag = flag;
-				fprintf(stdout, "	 flag %2d: %s 0x%02x\n", iflag, GlyphDiscriptionFlag_ToPrintString(flag), flag);
+				fprintf(stdout, "	 flag %2d: %s 0x%02x\n", iflag, GlyphDescriptionFlag_ToPrintString(flag), flag);
 				if(0 != (flag & (1 << 3))){
 					offsetInTable += sizeof(uint8_t);
 					uint8_t repeatNum = gdata[offsetInTable];
@@ -619,12 +619,12 @@ int main(int argc, char **argv)
 				bool isRepeated = (0 != gpoints[iflag].isFlagRepeated);
 				uint8_t flag = gpoints[iflag].flag;
 				fprintf(stdout, "	 flag %2d: %s 0x%02x %s\n",
-						iflag, GlyphDiscriptionFlag_ToPrintString(flag), flag, (isRepeated?"<repeated>":""));
+						iflag, GlyphDescriptionFlag_ToPrintString(flag), flag, (isRepeated?"<repeated>":""));
 			}
 
 			//dump0(&gdata[offsetInTable], 8);
 
-			// *** GlyphDiscription.XYCoordinates
+			// *** GlyphDescription.XYCoordinates
 			fprintf(stdout, "\n");
 			fprintf(stdout,
 				"	 Coordinates\n"

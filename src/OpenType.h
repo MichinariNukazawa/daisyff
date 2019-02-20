@@ -521,7 +521,7 @@ typedef struct{
 	int16 yMin;
 	int16 xMax;
 	int16 yMax;
-}GlyphDiscriptionHeader;
+}GlyphDescriptionHeader;
 
 typedef struct{
 	uint32		sfntVersion;

@@ -79,9 +79,9 @@ void glyphOutline0_test()
 	GlyphClosePath_addAnchorPoints(&cpath0, apoints0, sizeof(apoints0) / sizeof(GlyphAnchorPoint));
 	GlyphOutline_addClosePath(&outline, &cpath0);
 
-	GlyphDiscriptionBuf gdb_;
-	GlyphDiscriptionBuf *gdb = &gdb_;
-	GlyphDiscriptionBuf_setOutline(gdb, &outline);
+	GlyphDescriptionBuf gdb_;
+	GlyphDescriptionBuf *gdb = &gdb_;
+	GlyphDescriptionBuf_setOutline(gdb, &outline);
 
 	EXPECT_EQ_UINT(gdb->numberOfContours, 1);
 	EXPECT_TRUE(gdb->endPoints	!= NULL);

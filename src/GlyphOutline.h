@@ -8,13 +8,13 @@
 
 #include "src/OpenType.h"
 
-enum GlyphDiscriptionFlag_Bit{
-	GlyphDiscriptionFlag_Bit0_ON_CURVE_POINT		= 0x01,
-	GlyphDiscriptionFlag_Bit1_X_SHORT_VECTOR		= 0x02,
-	GlyphDiscriptionFlag_Bit2_Y_SHORT_VECTOR		= 0x04,
-	GlyphDiscriptionFlag_Bit3_REPEAT_FLAG			= 0x08,
-	GlyphDiscriptionFlag_Bit4_X_IS_SAME_OR_POSITIVE		= 0x10,
-	GlyphDiscriptionFlag_Bit5_Y_IS_SAME_OR_POSITIVE		= 0x20,
+enum GlyphDescriptionFlag_Bit{
+	GlyphDescriptionFlag_Bit0_ON_CURVE_POINT		= 0x01,
+	GlyphDescriptionFlag_Bit1_X_SHORT_VECTOR		= 0x02,
+	GlyphDescriptionFlag_Bit2_Y_SHORT_VECTOR		= 0x04,
+	GlyphDescriptionFlag_Bit3_REPEAT_FLAG			= 0x08,
+	GlyphDescriptionFlag_Bit4_X_IS_SAME_OR_POSITIVE		= 0x10,
+	GlyphDescriptionFlag_Bit5_Y_IS_SAME_OR_POSITIVE		= 0x20,
 };
 
 typedef struct{
@@ -27,7 +27,7 @@ typedef struct{
 	uint8_t		*yCoodinates;
 	//
 	size_t		pointNum;
-}GlyphDiscriptionBuf;
+}GlyphDescriptionBuf;
 
 typedef struct{
 	int16_t x;
@@ -66,7 +66,7 @@ void GlyphOutline_addClosePath(GlyphOutline *outline, const GlyphClosePath *cpat
 	(outline->closePathNum) += 1;
 }
 
-void GlyphDiscriptionBuf_setOutline(GlyphDiscriptionBuf *gdb, const GlyphOutline *outline)
+void GlyphDescriptionBuf_setOutline(GlyphDescriptionBuf *gdb, const GlyphOutline *outline)
 {
 	// ** pointNumカウントとEndPoints収集を行う
 	ASSERT(0 < outline->closePathNum);
@@ -97,7 +97,7 @@ void GlyphDiscriptionBuf_setOutline(GlyphDiscriptionBuf *gdb, const GlyphOutline
 		for(int a = 0; a < closePath->anchorPointNum; a++){
 			const GlyphAnchorPoint *anchorPoint = &(closePath->anchorPoints[a]);
 
-			uint8_t flag = (GlyphDiscriptionFlag_Bit0_ON_CURVE_POINT);
+			uint8_t flag = (GlyphDescriptionFlag_Bit0_ON_CURVE_POINT);
 			int16_t *xCoodinates = (int16_t *)(gdb->xCoodinates);
 			int16_t *yCoodinates = (int16_t *)(gdb->yCoodinates);
 
