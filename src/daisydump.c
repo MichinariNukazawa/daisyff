@@ -524,6 +524,12 @@ int main(int argc, char **argv)
 				fprintf(stdout, "	 skip datasize is zero.\n");
 				continue;
 			}
+
+			if(0 > glyphDiscriptionHeader_Host.numberOfContours){
+				fprintf(stdout, "	 skip CompositeGlyphDescription not implement.\n"); //!< @todo not implement.
+				continue;
+			}
+
 			//! @todo check GlyphDiscription elemetns on memory data range.
 
 			uint8_t *gdata = malloc(datasize);
