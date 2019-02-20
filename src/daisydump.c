@@ -537,7 +537,10 @@ int main(int argc, char **argv)
 
 			size_t pointNum = 0; //! @todo use flags from EndPoints?
 
+			size_t offsetInTable = 0;
+
 			// *** GlyphDiscription.EndPoints
+			offsetInTable += sizeof(GlyphDiscriptionHeader);
 			fprintf(stdout, "\n");
 			fprintf(stdout,
 				"	 EndPoints (%d)\n"
@@ -545,18 +548,19 @@ int main(int argc, char **argv)
 				glyphDiscriptionHeader_Host.numberOfContours
 				);
 			for(int co = 0; co < glyphDiscriptionHeader_Host.numberOfContours; co++){
-				uint16_t *p = (uint16_t *)&gdata[sizeof(GlyphDiscriptionHeader) + (co * sizeof(uint16_t))];
+				ASSERTF(offsetInTable < ntohl(tableDirectory_GlyfTable->length),
+						"%d", ntohl(tableDirectory_GlyfTable->length));
+
+				uint16_t *p = (uint16_t *)&gdata[offsetInTable];
 				uint16_t v = *p;
 				uint16_t endPtsOfContour = ntohs(v);
 				fprintf(stdout, "	 %2d: %2d\n", co, endPtsOfContour);
 
 				pointNum = endPtsOfContour + 1;
+				offsetInTable += sizeof(uint16_t);
 			}
 
-			size_t offsetInTable;
-
 			// *** GlyphDiscription.LengthOfInstructions
-			offsetInTable = sizeof(GlyphDiscriptionHeader) + (glyphDiscriptionHeader_Host.numberOfContours * sizeof(uint16_t));
 			uint16_t *p = (uint16_t *)&gdata[offsetInTable];
 			uint16_t v = *p;
 			uint16_t instructionLength = ntohs(v);
@@ -585,6 +589,9 @@ int main(int argc, char **argv)
 				pointNum);
 
 			for(int iflag = 0; iflag < pointNum; iflag++){
+				ASSERTF(offsetInTable < ntohl(tableDirectory_GlyfTable->length),
+						"%d", ntohl(tableDirectory_GlyfTable->length));
+
 				uint8_t flag = gdata[offsetInTable];
 				gpoints[iflag].flag = flag;
 				fprintf(stdout, "	 flag %2d: %s 0x%02x\n", iflag, GlyphDiscriptionFlag_ToPrintString(flag), flag);
