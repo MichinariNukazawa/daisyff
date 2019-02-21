@@ -2,7 +2,12 @@
 APP=./daisyff.exe
 CFLAGS		:= -std=c11 -lm -g
 INCLUDE		:= -I./ -I./include
+SOURCE_DIR	:= ./src
 OBJECT_DIR		:= ./object
+
+SOURCES		:= $(wildcard $(SOURCE_DIR)/*.c)
+OBJECTS		:= $(subst $(SOURCE_DIR),$(OBJECT_DIR),$(SOURCES:.c=.o))
+DEPENDS		:= $(OBJECTS:.o=.d)
 
 .PHONY: all run test clean
 .PHONY: dump com
@@ -15,7 +20,7 @@ all: run dump
 gdb: $(APP)
 	gdb --args $(APP) daisy-min
 
-test: test/test.c
+test: test/test.c src/*.c  src/*.h include/*.h
 	gcc $< $(CFLAGS) $(INCLUDE) -o ./test.exe
 	./test.exe
 
@@ -38,4 +43,6 @@ $(APP): src/daisyff.c src/*.h
 clean:
 	rm -rf $(APP) *.otf
 	rm -rf *.d
+
+-include $(DEPENDS)
 

@@ -47,8 +47,26 @@
 		} \
 	}while(0);
 
+
+#define EXPECT_EQ_ARRAY(ARG0, ARG1, ARG2) \
+	do{ \
+		const uint8_t *ARRAY0 = (ARG0); \
+		const uint8_t *ARRAY1 = (ARG1); \
+		size_t LENGTH = (ARG2); \
+		for(int i = 0; i < LENGTH; i++){ \
+			if((ARRAY0[i]) != (ARRAY1[i])){ \
+				fprintf(stderr, "EXPECT_EQ_ARRAY: %s()[%d]:('%s','%s')[%d/%zu] %d(0x%02x) != %d(0x%02x) \n", \
+						__func__, __LINE__, #ARG0, #ARG1, i, LENGTH, ARRAY0[i], ARRAY0[i], ARRAY1[i], ARRAY1[i]); \
+				exit(1); \
+			} \
+		}\
+	}while(0);
+
+
 void longdatetime_test()
 {
+	DEBUG_LOG("in");
+
 	LONGDATETIME t;
 	/*
 	// https://support.microsoft.com/ja-jp/help/214330/differences-between-the-1900-and-the-1904-date-system-in-excel
@@ -62,12 +80,17 @@ void longdatetime_test()
 	//EXPECT_EQ_UINT(0x00000000D1A40DF0, LONGDATETIME_generate(timeFromStr("2015-06-15T05:06:56+00:00")));
 
 	// https://nixeneko.hatenablog.com/entry/2016/10/08/001900 (Noto Sans Regular based)
-	DEBUG_LOG("diff: %16"PRIu64"", 0x00000000D3FF1335 - LONGDATETIME_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
+	//DEBUG_LOG("diff: %16"PRIu64"", 0x00000000D3FF1335 - LONGDATETIME_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
+	EXPECT_EQ_UINT(0, 0x00000000D3FF1335 - LONGDATETIME_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
 	EXPECT_EQ_UINT(0x00000000D3FF1335, LONGDATETIME_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
+
+	DEBUG_LOG("out");
 }
 
 void glyphOutline0_test()
 {
+	DEBUG_LOG("in");
+
 	GlyphOutline outline = {0};
 	GlyphClosePath cpath0 = {0};
 	GlyphAnchorPoint apoints0[] = {
@@ -102,6 +125,35 @@ void glyphOutline0_test()
 	EXPECT_EQ_UINT(yCoodinates[2], 600);
 	EXPECT_EQ_UINT(xCoodinates[3],  50);
 	EXPECT_EQ_UINT(yCoodinates[3], 600);
+
+	DEBUG_LOG("out");
+}
+
+void glyphDescriptionBufEmpty_test()
+{
+	DEBUG_LOG("in");
+
+	uint8_t dstarray[] = {
+			0,0, // int16 numberOfContours;
+			0,0, // int16 xMin;
+			0,0, // int16 yMin;
+			0x03,0xe8, // int16 xMax; = 1000
+			0x03,0xe8, // int16 yMax; = 1000
+			//uint16_t	*endPoints;
+			0,0, //uint16_t	instructionLength;
+			//uint8_t		*instructions;
+			//uint8_t		*flags;
+			//uint8_t		*xCoodinates;
+			//uint8_t		*yCoodinates;
+	};
+
+	GlyphDescriptionBuf glyphDescriptionBuf = {0};
+	GlyphDescriptionBuf_generateByteData(&glyphDescriptionBuf);
+
+	EXPECT_EQ_UINT(glyphDescriptionBuf.dataSize, sizeof(dstarray));
+	EXPECT_EQ_ARRAY(glyphDescriptionBuf.data, dstarray, sizeof(dstarray))
+
+	DEBUG_LOG("out");
 }
 
 int main()
@@ -109,6 +161,7 @@ int main()
 
 	longdatetime_test();
 	glyphOutline0_test();
+	glyphDescriptionBufEmpty_test();
 
 	fprintf(stdout, "success.\n");
 

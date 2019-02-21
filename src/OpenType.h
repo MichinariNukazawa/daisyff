@@ -78,6 +78,18 @@ uint64_t htonll(uint64_t x)
 	}
 }
 
+void dump0(uint8_t *buf, size_t size)
+{
+	fprintf(stdout, " 0x ");
+	for(int i = 0; i < size; i++){
+		if((0 != i) && (0 == (i % 8))){
+			fprintf(stdout, "\n");
+		}
+		fprintf(stdout, "%02x-", buf[i]);
+	}
+	fprintf(stdout, "\n");
+}
+
 /* ********
  * FontFormat 基本データ型
  * ******** **/
@@ -522,6 +534,93 @@ typedef struct{
 	int16 xMax;
 	int16 yMax;
 }GlyphDescriptionHeader;
+
+typedef struct{
+	// GlyphDescriptionHeader
+	int16_t		numberOfContours;
+	int16		xMin;
+	int16		yMin;
+	int16		xMax;
+	int16		yMax;
+	// SimpleGlyphDescription(Body)
+	uint16_t	*endPoints;
+	uint16_t	instructionLength;
+	uint8_t		*instructions;
+	uint8_t		*flags;
+	uint8_t		*xCoodinates;
+	uint8_t		*yCoodinates;
+	//
+	size_t		pointNum;
+	//
+	size_t		dataSize;
+	uint8_t		*data;
+}GlyphDescriptionBuf;
+
+void GlyphDescriptionBuf_generateByteData(GlyphDescriptionBuf *glyphDescriptionBuf)
+{
+	ASSERT(glyphDescriptionBuf);
+	ASSERT(NULL == glyphDescriptionBuf->data);
+
+	// byte dataメモリ確保
+	glyphDescriptionBuf->dataSize
+		= sizeof(GlyphDescriptionHeader)				// GlyphDescriptionHeader
+		+ (sizeof(uint16_t) * glyphDescriptionBuf->numberOfContours)	// endPoints[numberOfContours]
+		+ (sizeof(uint16_t))						// instructionLength
+		+ (sizeof(uint8_t) * glyphDescriptionBuf->instructionLength)	// instructions[instructionLength]
+		+ (sizeof(uint8_t) * glyphDescriptionBuf->pointNum)		// flags[] // 短縮は未実装
+		+ (sizeof(int16_t) * glyphDescriptionBuf->pointNum)		// xCoodinates[] // SHORT_VECTORは未実装
+		+ (sizeof(int16_t) * glyphDescriptionBuf->pointNum)		// yCoodinates[] // SHORT_VECTORは未実装
+		;
+	glyphDescriptionBuf->data = malloc(glyphDescriptionBuf->dataSize);
+	ASSERT(glyphDescriptionBuf->data);
+	memset(glyphDescriptionBuf->data, 0, glyphDescriptionBuf->dataSize);
+
+	GlyphDescriptionHeader glyphDescriptionHeader = {
+		.numberOfContours	= htons(glyphDescriptionBuf->numberOfContours),
+		.xMin			= htons(0),
+		.yMin			= htons(0),
+		.xMax			= htons(1000),
+		.yMax			= htons(1000),
+	};
+
+	size_t offset = 0;
+	size_t wsize;
+	uint16_t v16;
+	// GlyphDescriptionHeader
+	wsize = sizeof(GlyphDescriptionHeader);
+	memcpy(&(glyphDescriptionBuf->data[offset]), &glyphDescriptionHeader, wsize);
+	offset += wsize;
+	// numberOfContours
+	wsize = sizeof(int16_t);
+	v16 = htons(glyphDescriptionBuf->numberOfContours);
+	memcpy(&(glyphDescriptionBuf->data[offset]), &v16, wsize);
+	offset += wsize;
+	// endPoints[numberOfContours]
+	wsize = (sizeof(uint16_t) * glyphDescriptionBuf->numberOfContours);
+	memcpy(&(glyphDescriptionBuf->data[offset]), glyphDescriptionBuf->endPoints, wsize);
+	offset += wsize;
+	// instructionLength
+	wsize = sizeof(uint16_t);
+	v16 = htons(glyphDescriptionBuf->instructionLength);
+	memcpy(&(glyphDescriptionBuf->data[offset]), &v16, wsize);
+	offset += wsize;
+	// instructions[instructionLength]
+	wsize = (sizeof(uint8_t) * glyphDescriptionBuf->instructionLength);
+	memcpy(&(glyphDescriptionBuf->data[offset]), glyphDescriptionBuf->instructions, wsize);
+	offset += wsize;
+	// flags[] // 短縮は未実装
+	wsize = (sizeof(uint8_t) * glyphDescriptionBuf->pointNum);
+	memcpy(&(glyphDescriptionBuf->data[offset]), glyphDescriptionBuf->flags, wsize);
+	offset += wsize;
+	// xCoodinates[] // SHORT_VECTORは未実装
+	wsize = (sizeof(int16_t) * glyphDescriptionBuf->pointNum);
+	memcpy(&(glyphDescriptionBuf->data[offset]), glyphDescriptionBuf->xCoodinates, wsize);
+	offset += wsize;
+	// yCoodinates[] // SHORT_VECTORは未実装
+	wsize = (sizeof(int16_t) * glyphDescriptionBuf->pointNum);
+	memcpy(&(glyphDescriptionBuf->data[offset]), glyphDescriptionBuf->yCoodinates, wsize);
+	offset += wsize;
+}
 
 typedef struct{
 	uint32		sfntVersion;

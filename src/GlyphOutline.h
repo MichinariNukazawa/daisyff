@@ -18,18 +18,6 @@ enum GlyphDescriptionFlag_Bit{
 };
 
 typedef struct{
-	int16_t		numberOfContours;
-	uint16_t	*endPoints;
-	uint8_t		*flags;
-	uint16_t	instructionLength;
-	uint8_t		*instructions;
-	uint8_t		*xCoodinates;
-	uint8_t		*yCoodinates;
-	//
-	size_t		pointNum;
-}GlyphDescriptionBuf;
-
-typedef struct{
 	int16_t x;
 	int16_t y;
 }Point;

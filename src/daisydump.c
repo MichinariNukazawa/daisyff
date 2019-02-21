@@ -235,18 +235,6 @@ bool copyrange(int fd, uint8_t *buf, size_t offset, size_t size)
 	return true;
 }
 
-void dump0(uint8_t *buf, size_t size)
-{
-	fprintf(stdout, " 0x ");
-	for(int i = 0; i < size; i++){
-		if((0 != i) && (0 == (i % 8))){
-			fprintf(stdout, "\n");
-		}
-		fprintf(stdout, "%02x-", buf[i]);
-	}
-	fprintf(stdout, "\n");
-}
-
 int main(int argc, char **argv)
 {
 	/**
