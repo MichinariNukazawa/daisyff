@@ -681,6 +681,13 @@ bool OffsetTable_init(OffsetTable *offsetTable_, uint32 sfntVersion, int numTabl
 	return true;
 }
 
+size_t TableSizeAlign(size_t size)
+{
+	int p = ((0 != (size % 4))? 1 : 0);
+	size = ((size / 4) + p) * 4;
+	return size;
+}
+
 uint32 CalcTableChecksum(uint32 *table, uint32 numberOfBytesInTable)
 {
 	uint32 sum = 0;
@@ -688,6 +695,14 @@ uint32 CalcTableChecksum(uint32 *table, uint32 numberOfBytesInTable)
 	while (nLongs-- > 0)
 		sum += *table++;
 	return sum;
+}
+
+//! @brief Table alignを考慮したchecksum計算関数
+uint32_t calcChecksumWrapper(const uint8_t *data, size_t size)
+{
+	uint8_t *d = ffmalloc(TableSizeAlign(size));
+	memcpy(d, data, size);
+	return CalcTableChecksum((uint32_t *)d, size);
 }
 
 typedef struct{
@@ -704,22 +719,17 @@ void TableDirectory_Member_init(TableDirectory_Member *self_, const char *tagstr
 	ASSERT(tableData);
 	ASSERT(0 < tableSize);
 
+	uint32_t checksum = calcChecksumWrapper(tableData, tableSize);
+
 	TableDirectory_Member self;
 	ASSERT(tag_init(&(self.tag), tagstring));
-	self.checkSum	= htonl(CalcTableChecksum((uint32_t *)tableData, tableSize));
+	self.checkSum	= htonl(checksum);
 	self.offset	= htonl(offset);
 	self.length	= htonl(tableSize);
 
 	*self_ = self;
 
 	return;
-}
-
-size_t TableSizeAlign(size_t size)
-{
-	int p = ((0 != (size % 4))? 1 : 0);
-	size = ((size / 4) + p) * 4;
-	return size;
 }
 
 typedef struct{
