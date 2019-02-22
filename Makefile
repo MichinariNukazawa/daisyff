@@ -15,7 +15,7 @@ DEPENDS		:= $(OBJECTS:.o=.d)
 run: $(APP)
 	$(APP) daisy-min
 
-all: run dump
+all: run test dump
 
 gdb: $(APP)
 	gdb --args $(APP) daisy-min
