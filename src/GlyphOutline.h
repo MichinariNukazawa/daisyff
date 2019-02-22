@@ -38,8 +38,7 @@ typedef struct{
 
 void GlyphClosePath_addAnchorPoints(GlyphClosePath *cpath, const GlyphAnchorPoint *anchorPoints, size_t anchorPointNum)
 {
-	cpath->anchorPoints = realloc(cpath->anchorPoints, sizeof(GlyphAnchorPoint) * (cpath->anchorPointNum + anchorPointNum));
-	ASSERT(cpath->anchorPoints);
+	cpath->anchorPoints = ffrealloc(cpath->anchorPoints, sizeof(GlyphAnchorPoint) * (cpath->anchorPointNum + anchorPointNum));
 
 	memcpy(&(cpath->anchorPoints[cpath->anchorPointNum]), anchorPoints, sizeof(GlyphAnchorPoint) * anchorPointNum);
 	cpath->anchorPointNum += anchorPointNum;
@@ -47,8 +46,7 @@ void GlyphClosePath_addAnchorPoints(GlyphClosePath *cpath, const GlyphAnchorPoin
 
 void GlyphOutline_addClosePath(GlyphOutline *outline, const GlyphClosePath *cpath)
 {
-	outline->closePaths = realloc(outline->closePaths, sizeof(GlyphClosePath) * (outline->closePathNum + 1));
-	ASSERT(outline->closePaths);
+	outline->closePaths = ffrealloc(outline->closePaths, sizeof(GlyphClosePath) * (outline->closePathNum + 1));
 
 	memcpy(&(outline->closePaths[outline->closePathNum]), cpath, sizeof(GlyphClosePath) * 1);
 	(outline->closePathNum) += 1;
@@ -59,7 +57,7 @@ void GlyphDescriptionBuf_setOutline(GlyphDescriptionBuf *gdb, const GlyphOutline
 	// ** pointNumカウントとEndPoints収集を行う
 	ASSERT(0 < outline->closePathNum);
 	gdb->numberOfContours = outline->closePathNum;
-	gdb->endPoints = malloc(sizeof(uint16_t) * gdb->numberOfContours);
+	gdb->endPoints = ffmalloc(sizeof(uint16_t) * gdb->numberOfContours);
 	gdb->pointNum = 0;
 	for(int l = 0; l < outline->closePathNum; l++){
 		const GlyphClosePath *closePath = &(outline->closePaths[l]);
@@ -70,13 +68,13 @@ void GlyphDescriptionBuf_setOutline(GlyphDescriptionBuf *gdb, const GlyphOutline
 
 	// ** buffer確保
 	// repeatによる短縮はこの段階では行わず最大長を取る。
-	gdb->flags		= malloc(sizeof(uint8_t) * gdb->pointNum);
+	gdb->flags		= ffmalloc(sizeof(uint8_t) * gdb->pointNum);
 	// Instructionは現在のdaisyffの実装では使用しない。
 	gdb->instructionLength	= 0;
 	gdb->instructions	= NULL;
 	// SHORT_VECTORによる短縮はこの段階では行わず最大長を取る。
-	gdb->xCoodinates	= malloc(sizeof(int16_t) * gdb->pointNum);
-	gdb->yCoodinates	= malloc(sizeof(int16_t) * gdb->pointNum);
+	gdb->xCoodinates	= ffmalloc(sizeof(int16_t) * gdb->pointNum);
+	gdb->yCoodinates	= ffmalloc(sizeof(int16_t) * gdb->pointNum);
 
 	// ** flags, coodinatesをベタ展開
 	int pointcount = 0;

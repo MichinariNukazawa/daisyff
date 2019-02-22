@@ -103,8 +103,7 @@ int main(int argc, char **argv)
 		+ tableBuf.dataSize
 		;
 	// 開放はアプリ終了時に任せる
-	uint8_t *fontData = (uint8_t *)malloc(sizeof(uint8_t) * fontDataSize);
-	ASSERT(fontData);
+	uint8_t *fontData = (uint8_t *)ffmalloc(sizeof(uint8_t) * fontDataSize);
 
 	/**
 	  フォントデータを連結(HeadTable.checkSumAdjustmentの計算に用いる)
@@ -138,8 +137,7 @@ int main(int argc, char **argv)
 	/**
 	  ファイル書き出し
 	  */
-	char *fontfilename = (char *)malloc(strlen(fontname) + 5);
-	ASSERT(fontfilename);
+	char *fontfilename = (char *)ffmalloc(strlen(fontname) + 5);
 	sprintf(fontfilename, "%s.otf", fontname);
 	int fd = open(fontfilename, O_CREAT|O_TRUNC|O_RDWR, 0777);
 	if(-1 == fd){

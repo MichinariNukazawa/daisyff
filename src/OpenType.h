@@ -30,6 +30,10 @@
 #include <stddef.h>
 #include <byteswap.h>
 
+//* ********
+//* Utils
+//* ********
+
 #define ERROR_LOG(fmt, ...) \
 	fprintf(stderr, "error: %s()[%d]: "fmt"\n", __func__, __LINE__, ## __VA_ARGS__)
 #define WARN_LOG(fmt, ...) \
@@ -58,9 +62,37 @@
 		ASSERT(0 < strlen(fmt)); \
 		size_t n = snprintf(NULL, 0, fmt, ## __VA_ARGS__); \
 		ASSERT(0 < n); \
-		res = (char *)malloc(n + 1); \
+		res = (char *)ffmalloc(n + 1); \
 		snprintf(res, n+1, fmt, ## __VA_ARGS__); \
 	}while(0);
+
+void *ffmalloc_inline_(size_t size, const char *strsize, const char *func, int line)
+{
+	void *p = malloc(size);
+	if(NULL == p){
+		fprintf(stderr, "critical: %s()[%d]:ffmalloc(%s)\n", func, line, strsize);
+		exit(1);
+	}
+	memset(p, 0, size);
+
+	return p;
+}
+#define ffmalloc(size) ffmalloc_inline_((size), #size, __func__, __LINE__)
+
+void *ffrealloc_inline_(
+		void *srcp, size_t size,
+		const char *strsrcp, const char *strsize,
+		const char *func, int line)
+{
+	void *dstp = realloc(srcp, size);
+	if(NULL == dstp){
+		fprintf(stderr, "critical: %s()[%d]:ffrealloc(%s, %s)'\n", func, line, strsrcp, strsize);
+		exit(1);
+	}
+
+	return dstp;
+}
+#define ffrealloc(srcp, size) ffrealloc_inline_((srcp), (size), #srcp, #size, __func__, __LINE__)
 
 // http://www.math.kobe-u.ac.jp/HOME/kodama/tips-C-endian.html
 bool IS_LITTLE_ENDIAN()
@@ -396,7 +428,7 @@ typedef uint16 NameID;
 uint8_t *convertNewUtf16FromUtf8(const char *stringdata)
 {
 	//! @todo ASCIIしか変換できない。(とりあえずcopyrightマークに非対応な状態)
-	uint8_t *utf16s = (uint8_t *)malloc((strlen(stringdata) * 2) + 2);
+	uint8_t *utf16s = (uint8_t *)ffmalloc((strlen(stringdata) * 2) + 2);
 	for(int i = 0; i < strlen(stringdata); i++){
 		utf16s[(i * 2) + 0] = 0x00;
 		utf16s[(i * 2) + 1] = stringdata[i];
@@ -422,10 +454,9 @@ void NameTableBuf_append(
 	size_t utf16sSize = strlen(stringdata) * 2;
 
 	// ** NameTable.nameRecord[]に新しいNameRecordを追加。
-	nameTableBuf->nameRecord = (NameRecord_Member *)realloc(
+	nameTableBuf->nameRecord = (NameRecord_Member *)ffrealloc(
 			nameTableBuf->nameRecord,
 			sizeof(NameRecord_Member) * (nameTableBuf->count + 1));
-	ASSERT(nameTableBuf->nameRecord);
 	NameRecord_Member nameRecord_Member = {
 		.platformID	= htons(platformID),
 		.encodingID	= htons(encodingID),
@@ -441,8 +472,7 @@ void NameTableBuf_append(
 	//DEBUG_LOG("%zu %zu", nameTableBuf->stringStrageSize, strlen(stringdata));
 	char *utf16s = convertNewUtf16FromUtf8(stringdata);
 	size_t newsize = nameTableBuf->stringStrageSize + utf16sSize;
-	nameTableBuf->stringStrage = (uint8_t *)realloc(nameTableBuf->stringStrage, newsize);
-	ASSERT(nameTableBuf->stringStrage);
+	nameTableBuf->stringStrage = (uint8_t *)ffrealloc(nameTableBuf->stringStrage, newsize);
 	memcpy(&nameTableBuf->stringStrage[nameTableBuf->stringStrageSize], utf16s, utf16sSize);
 	nameTableBuf->stringStrageSize = newsize;
 }
@@ -456,8 +486,7 @@ void NameTableBuf_generateByteData(NameTableBuf *nameTableBuf)
 	size_t nameTableSize = sizeof(NameTableHeader_Format0)
 		+ (sizeof(NameRecord_Member) * nameTableBuf->count)
 		+ nameTableBuf->stringStrageSize;
-	nameTableBuf->data		= (uint8_t *)malloc(nameTableSize);
-	ASSERT(nameTableBuf->data);
+	nameTableBuf->data		= (uint8_t *)ffmalloc(nameTableSize);
 	nameTableBuf->dataSize		= nameTableSize;
 
 	size_t stringOffset = sizeof(NameTableHeader_Format0) + (sizeof(NameRecord_Member) * nameTableBuf->count);
@@ -571,9 +600,7 @@ void GlyphDescriptionBuf_generateByteData(GlyphDescriptionBuf *glyphDescriptionB
 		+ (sizeof(int16_t) * glyphDescriptionBuf->pointNum)		// xCoodinates[] // SHORT_VECTORは未実装
 		+ (sizeof(int16_t) * glyphDescriptionBuf->pointNum)		// yCoodinates[] // SHORT_VECTORは未実装
 		;
-	glyphDescriptionBuf->data = malloc(glyphDescriptionBuf->dataSize);
-	ASSERT(glyphDescriptionBuf->data);
-	memset(glyphDescriptionBuf->data, 0, glyphDescriptionBuf->dataSize);
+	glyphDescriptionBuf->data = ffmalloc(glyphDescriptionBuf->dataSize);
 
 	GlyphDescriptionHeader glyphDescriptionHeader = {
 		.numberOfContours	= htons(glyphDescriptionBuf->numberOfContours),
@@ -724,8 +751,7 @@ bool Tablebuf_appendTable(Tablebuf *tableBuf, const char *tagstring, const uint8
 
 	// ** TableDirectory の作成
 	// TableDirectoryを1メンバ分伸ばす
-	tableBuf->tableDirectory = realloc(tableBuf->tableDirectory, sizeof(TableDirectory_Member) * (tableBuf->appendTableNum + 1));
-	ASSERT(tableBuf->tableDirectory);
+	tableBuf->tableDirectory = ffrealloc(tableBuf->tableDirectory, sizeof(TableDirectory_Member) * (tableBuf->appendTableNum + 1));
 	const size_t offset = tableBuf->dataSize;
 	// TableDirectoryにTableを追加
 	TableDirectory_Member_init(
@@ -737,8 +763,7 @@ bool Tablebuf_appendTable(Tablebuf *tableBuf, const char *tagstring, const uint8
 
 	// ** Tableバイト列の生成と連結 新たなTableを末尾に追加 // Table末尾は32bit allignかつzero padding
 	const size_t alignedSize = TableSizeAlign(tableSize);
-	tableBuf->data = realloc(tableBuf->data, tableBuf->dataSize + alignedSize);
-	ASSERT(tableBuf->data);
+	tableBuf->data = ffrealloc(tableBuf->data, tableBuf->dataSize + alignedSize);
 	memset(&tableBuf->data[tableBuf->dataSize], 0x00, alignedSize);
 	memcpy(&tableBuf->data[tableBuf->dataSize], tableData, tableSize);
 

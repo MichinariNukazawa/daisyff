@@ -42,8 +42,7 @@ TagType TagType_Generate(const char *tagstring)
 //!< @return malloc tag like string or 32bit hex dump.
 const char *TagType_ToPrintString(uint32_t tagValue)
 {
-	char *tagstr = malloc(strlen("0x12345678") + 1);
-	ASSERT(tagstr);
+	char *tagstr = ffmalloc(strlen("0x12345678") + 1);
 
 	bool isPrintable = true;
 	for(int i = 0; i < 4; i++){
@@ -68,8 +67,7 @@ typedef uint32_t FixedType;
 //!< @todo ここは正直正しいのかどうかよくわからない(minorが複数桁の場合)
 char *FixedType_ToPrintString(FixedType fixedvalue)
 {
-	char *fixedstring = malloc(strlen("0000.0000") + 1);
-	ASSERT(fixedstring);
+	char *fixedstring = ffmalloc(strlen("0000.0000") + 1);
 
 	uint16_t major = (uint16_t)(fixedvalue >> 16);
 	uint16_t minor = (uint16_t)(fixedvalue >>  0);
@@ -88,8 +86,7 @@ char *LongdatetimeType_ToPrintString(LongdatetimeType longdatetimevalue)
 
 	ASSERT(NULL != gmtime_r(&time, &tm));
 
-	char *tstring = malloc(256);
-	ASSERT(tstring);
+	char *tstring = ffmalloc(256);
 	size_t size = strftime(tstring, 256, "%Y-%m-%dT%H:%M:%S", &tm);
 
 	return tstring;
@@ -161,7 +158,7 @@ typedef int LocaTable_Kind;
 
 char *GlyphDescriptionFlag_ToPrintString(uint8_t flag)
 {
-	char *str = malloc(512);
+	char *str = ffmalloc(512);
 	snprintf(str, 512,
 		"%-7s %-7s %-7s %-7s %-7s %-7s %-9s",
 		(0 != (flag & (1 << 6))) ? "Overlap":"",
@@ -291,7 +288,7 @@ int main(int argc, char **argv)
 			return 1;
 		}
 
-		tableDirectory = realloc(tableDirectory, sizeof(TableDirectory_Member) * (i + 1));
+		tableDirectory = ffrealloc(tableDirectory, sizeof(TableDirectory_Member) * (i + 1));
 		ASSERT(tableDirectory);
 		memcpy(&tableDirectory[i], &tableDirectory_Member, sizeof(TableDirectory_Member));
 
@@ -452,7 +449,7 @@ int main(int argc, char **argv)
 				dv = longv;
 			}
 
-			locaList = (uint32_t *)realloc(locaList, sizeof(uint32_t) * (i + 1));
+			locaList = (uint32_t *)ffrealloc(locaList, sizeof(uint32_t) * (i + 1));
 			ASSERT(locaList);
 			locaList[i] = dv;
 
@@ -520,7 +517,7 @@ int main(int argc, char **argv)
 
 			//! @todo check GlyphDescription elemetns on memory data range.
 
-			uint8_t *gdata = malloc(datasize);
+			uint8_t *gdata = ffmalloc(datasize);
 			if(! copyrange(fd, gdata, ntohl(tableDirectory_GlyfTable->offset) + offsetOnTable, datasize)){
 				FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));
 				return 1;
@@ -571,9 +568,7 @@ int main(int argc, char **argv)
 				offsetInTable += sizeof(uint8_t);
 			}
 
-			GlyphDescriptionPoint *gpoints = malloc(pointNum * sizeof(GlyphDescriptionPoint));
-			ASSERT(gpoints);
-			memset(gpoints, 0, (pointNum * sizeof(GlyphDescriptionPoint)));
+			GlyphDescriptionPoint *gpoints = ffmalloc(pointNum * sizeof(GlyphDescriptionPoint));
 
 			// *** GlyphDescription.Flags
 			fprintf(stdout, "\n");
