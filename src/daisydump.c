@@ -22,8 +22,6 @@ uint64_t ntohll(uint64_t x)
 	}
 }
 
-typedef uint32_t TagType;
-
 TagType TagType_Generate(const char *tagstring)
 {
 	ASSERT(tagstring);
@@ -62,8 +60,6 @@ const char *TagType_ToPrintString(uint32_t tagValue)
 	return tagstr;
 }
 
-typedef uint32_t FixedType;
-
 //!< @todo ここは正直正しいのかどうかよくわからない(minorが複数桁の場合)
 char *FixedType_ToPrintString(FixedType fixedvalue)
 {
@@ -76,9 +72,7 @@ char *FixedType_ToPrintString(FixedType fixedvalue)
 	return fixedstring;
 }
 
-typedef uint64_t LongdatetimeType;
-
-char *LongdatetimeType_ToPrintString(LongdatetimeType longdatetimevalue)
+char *LONGDATETIMEType_ToPrintString(LONGDATETIMEType longdatetimevalue)
 {
 	time_t time = longdatetimevalue - LONGDATETIME_DELTA;
 
@@ -97,7 +91,7 @@ const char *OffsetTable_SfntVersion_ToPrintString(uint32_t sfntVersion)
 	return TagType_ToPrintString(sfntVersion);
 }
 
-TableDirectory_Member *TableDirectory_QueryTag(TableDirectory_Member *tableDirectory, size_t numTables, tag tagvalue)
+TableDirectory_Member *TableDirectory_QueryTag(TableDirectory_Member *tableDirectory, size_t numTables, TagType tagvalue)
 {
 	for(int i = 0; i < numTables; i++){
 		//DEBUG_LOG("%04x %04x", tableDirectory[i].tag, tagvalue);
@@ -359,9 +353,9 @@ int main(int argc, char **argv)
 			headTable_Host.flags			,
 			headTable_Host.unitsPerEm		,
 			headTable_Host.created		,
-			LongdatetimeType_ToPrintString(headTable_Host.created)		,
+			LONGDATETIMEType_ToPrintString(headTable_Host.created)		,
 			headTable_Host.modified		,
-			LongdatetimeType_ToPrintString(headTable_Host.modified)		,
+			LONGDATETIMEType_ToPrintString(headTable_Host.modified)		,
 			headTable_Host.xMin			,
 			headTable_Host.yMin			,
 			headTable_Host.xMax			,

@@ -67,22 +67,22 @@ void longdatetime_test()
 {
 	DEBUG_LOG("in");
 
-	LONGDATETIME t;
+	LONGDATETIMEType t;
 	/*
 	// https://support.microsoft.com/ja-jp/help/214330/differences-between-the-1900-and-the-1904-date-system-in-excel
-	t = LONGDATETIME_generate(timeFromStr("1904-07-05T00:00:00+00:00"));
+	t = LONGDATETIMEType_generate(timeFromStr("1904-07-05T00:00:00+00:00"));
 	DEBUG_LOG("%u", t);
 	EXPECT_EQ_UINT(34519, t);
 	 */
 
 	// https://nixeneko.hatenablog.com/entry/2018/06/20/000000 (Noto Sans CJK JP RegularのVersion 1.004)
-	//DEBUG_LOG("diff: %u", 0x00000000D1A40DF0 - LONGDATETIME_generate(timeFromStr("2015-06-15T05:06:56+00:00")));
-	//EXPECT_EQ_UINT(0x00000000D1A40DF0, LONGDATETIME_generate(timeFromStr("2015-06-15T05:06:56+00:00")));
+	//DEBUG_LOG("diff: %u", 0x00000000D1A40DF0 - LONGDATETIMEType_generate(timeFromStr("2015-06-15T05:06:56+00:00")));
+	//EXPECT_EQ_UINT(0x00000000D1A40DF0, LONGDATETIMEType_generate(timeFromStr("2015-06-15T05:06:56+00:00")));
 
 	// https://nixeneko.hatenablog.com/entry/2016/10/08/001900 (Noto Sans Regular based)
-	//DEBUG_LOG("diff: %16"PRIu64"", 0x00000000D3FF1335 - LONGDATETIME_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
-	EXPECT_EQ_UINT(0, 0x00000000D3FF1335 - LONGDATETIME_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
-	EXPECT_EQ_UINT(0x00000000D3FF1335, LONGDATETIME_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
+	//DEBUG_LOG("diff: %16"PRIu64"", 0x00000000D3FF1335 - LONGDATETIMEType_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
+	EXPECT_EQ_UINT(0, 0x00000000D3FF1335 - LONGDATETIMEType_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
+	EXPECT_EQ_UINT(0x00000000D3FF1335, LONGDATETIMEType_generate(timeFromStr("2016-09-14T14:46:13+00:00")));
 
 	DEBUG_LOG("out");
 }

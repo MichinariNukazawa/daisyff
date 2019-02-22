@@ -122,20 +122,23 @@ void dump0(uint8_t *buf, size_t size)
 	fprintf(stdout, "\n");
 }
 
-/* ********
- * FontFormat 基本データ型
- * ******** **/
+// * ********
+// * Basic font format type 基本データ型
+// * ********
 
-typedef int16_t  int16;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint32_t tag;
-typedef uint32_t Fixed;
-typedef uint64_t LONGDATETIME;
+typedef int16_t  Int16Type;
+typedef uint16_t Uint16Type;
+typedef uint32_t Uint32Type;
+typedef uint32_t TagType;
+typedef uint32_t FixedType;
+typedef uint64_t LONGDATETIMEType;
+//! @note 命名規則はCamelCaseだがLONGDATETIMEは見た目が締まるので大文字のままとした
+
+typedef uint16_t TypeOffset16;
 
 /**
   */
-bool tag_valid(const tag tag_)
+bool TagType_valid(const TagType tag_)
 {
 	for(int i = 0; i < 4; i++){
 		uint8_t v = 0xff & ((uint32_t)tag_ >> ((3 - i) * 8));
@@ -148,7 +151,7 @@ bool tag_valid(const tag tag_)
 	return true;
 }
 
-bool tag_init(tag *tag_, const char *tagstring)
+bool TagType_init(TagType *tag_, const char *tagstring)
 {
 	ASSERT(tag_);
 	ASSERT(tagstring);
@@ -160,7 +163,7 @@ bool tag_init(tag *tag_, const char *tagstring)
 
 	memcpy((void *)tag_, tagstring, 4);
 
-	if(! tag_valid(*tag_)){
+	if(! TagType_valid(*tag_)){
 		ERROR_LOG("`%s`", tagstring);
 		return false;
 	}
@@ -208,16 +211,16 @@ time_t timeFromStr(const char *time_details)
 }
 
 const uint64_t LONGDATETIME_DELTA = 2082844800;
-LONGDATETIME LONGDATETIME_generate(time_t time)
+LONGDATETIMEType LONGDATETIMEType_generate(time_t time)
 {
 	/**
 	Unixエポック: UNIX時間（1970年1月1日 UTC(協定世界時)0時00分00秒
 		date --date "1970-01-01T00:00:00+00:00" +%s // 0
-	LONGDATETIME: 12:00 midnight, January 1, 1904
+	LONGDATETIMEType: 12:00 midnight, January 1, 1904
 		date --date "1904-01-01T00:00:00+00:00" +%s // -2082844800
 	 */
 	//! @todo INT64_MAXを超えるかチェックしていない
-	LONGDATETIME t = (LONGDATETIME)((uint64_t)time + LONGDATETIME_DELTA);
+	LONGDATETIMEType t = (LONGDATETIMEType)((uint64_t)time + LONGDATETIME_DELTA);
 	return t;
 }
 
@@ -285,38 +288,38 @@ BBox BBox_generate(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax)
 #pragma pack (1)
 
 typedef struct{
-	uint16			majorVersion;		// 1固定
-	uint16			minorVersion;		// 0固定
-	Fixed			fontRevision;		// フォント製造者が付けるリビジョン番号
-	uint32			checkSumAdjustment;	// フォント全体のチェックサム(別述)
-	uint32			magicNumber;		// 0x5F0F3CF5固定
-	uint16			flags;			// フラグ(別述)
-	uint16			unitsPerEm;		// ユニット数
+	Uint16Type		majorVersion;		// 1固定
+	Uint16Type		minorVersion;		// 0固定
+	FixedType		fontRevision;		// フォント製造者が付けるリビジョン番号
+	Uint32Type		checkSumAdjustment;	// フォント全体のチェックサム(別述)
+	Uint32Type		magicNumber;		// 0x5F0F3CF5固定
+	Uint16Type		flags;			// フラグ(別述)
+	Uint16Type		unitsPerEm;		// ユニット数
 		/*  範囲16-16384でTrueTypeアウトラインでは速度最適化のため2の倍数を推奨。*/
-	LONGDATETIME		created;		// 作成日時
-	LONGDATETIME		modified;		// 更新日時
-	int16			xMin;			// bounding box
-	int16			yMin;			//
-	int16			xMax;			//
-	int16			yMax;			//
-	uint16			macStyle;		// スタイル（Bold,Italic等）
+	LONGDATETIMEType		created;		// 作成日時
+	LONGDATETIMEType		modified;		// 更新日時
+	Int16Type		xMin;			// bounding box
+	Int16Type		yMin;			//
+	Int16Type		xMax;			//
+	Int16Type		yMax;			//
+	Uint16Type		macStyle;		// スタイル（Bold,Italic等）
 		/* windowsではOS/2 TableのfsSelection要素とbitアサインが共通 */
-	uint16			lowestRecPPEM;		// 可読なピクセル数の下限
-	int16			fontDirectionHint;	// 廃止されたヒント情報(2固定)
-	int16			indexToLocFormat;	// 不明。
+	Uint16Type		lowestRecPPEM;		// 可読なピクセル数の下限
+	Int16Type		fontDirectionHint;	// 廃止されたヒント情報(2固定)
+	Int16Type		indexToLocFormat;	// 不明。
 		/* 0:short offset, 1:long offsetらしい。とりあえず0でよさそう。 */
-	int16			glyphDataFormat;	// 0固定
+	Int16Type		glyphDataFormat;	// 0固定
 }HeadTable;
 
 bool HeadTable_init(
 		HeadTable		*headTable_,
-		Fixed			fontRevision,
+		FixedType		fontRevision,
 		HeadTableFlagsElement	flags,
-		LONGDATETIME		created,
-		LONGDATETIME		modified,
+		LONGDATETIMEType	created,
+		LONGDATETIMEType	modified,
 		MacStyle		macStyle,
 		BBox			bbox,
-		uint16			lowestRecPPEM
+		Uint16Type		lowestRecPPEM
 		)
 {
 	HeadTable headTable = {
@@ -345,8 +348,8 @@ bool HeadTable_init(
 }
 
 typedef struct{
-	Fixed		version;
-	uint16		numGlyphs;
+	FixedType		version;
+	Uint16Type	numGlyphs;
 }MaxpTable_Version05;
 
 bool MaxpTable_Version05_init(MaxpTable_Version05 *maxpTable_Version05_, unsigned int numGlyphs)
@@ -357,7 +360,7 @@ bool MaxpTable_Version05_init(MaxpTable_Version05 *maxpTable_Version05_, unsigne
 	}
 
 	MaxpTable_Version05 maxpTable_Version05 = {
-		.version		= (Fixed)htonl(0x00005000),
+		.version		= (FixedType)htonl(0x00005000),
 		.numGlyphs		= htons(numGlyphs),
 	};
 
@@ -366,12 +369,10 @@ bool MaxpTable_Version05_init(MaxpTable_Version05 *maxpTable_Version05_, unsigne
 	return true;
 }
 
-typedef uint16 Offset16;
-
 typedef struct{
-	uint16			format;
-	uint16			count;
-	Offset16		stringOffset;
+	Uint16Type		format;
+	Uint16Type		count;
+	TypeOffset16		stringOffset;
 	// NameRecord[count]
 	// (Variable) string strage
 }NameTableHeader_Format0;
@@ -395,18 +396,18 @@ const char *MacStyle_toStringForNameTable(MacStyle macStyle)
 }
 
 typedef struct{
-	uint16		platformID;
-	uint16		encodingID;
-	uint16		languageID;
-	uint16		nameID;
-	uint16		length;
-	Offset16	offset;
+	Uint16Type	platformID;
+	Uint16Type	encodingID;
+	Uint16Type	languageID;
+	Uint16Type	nameID;
+	Uint16Type	length;
+	TypeOffset16	offset;
 }NameRecord_Member;
 
 typedef struct{
-	uint16			format;
-	uint16			count;
-	Offset16		stringOffset;
+	Uint16Type		format;
+	Uint16Type		count;
+	TypeOffset16		stringOffset;
 	NameRecord_Member	*nameRecord;
 	uint8_t			*stringStrage;
 	size_t 			stringStrageSize;
@@ -420,10 +421,10 @@ enum PlatformID{
 enum EncodingID{
 	EncodingID_Unicode_0		= 0,
 };
-typedef uint16 PlatformID;
-typedef uint16 EncodingID;
-typedef uint16 LanguageID;
-typedef uint16 NameID;
+typedef Uint16Type PlatformID;
+typedef Uint16Type EncodingID;
+typedef Uint16Type LanguageID;
+typedef Uint16Type NameID;
 
 uint8_t *convertNewUtf16FromUtf8(const char *stringdata)
 {
@@ -557,20 +558,20 @@ NameTableBuf NameTableBuf_init(
 }
 
 typedef struct{
-	int16 numberOfContours;
-	int16 xMin;
-	int16 yMin;
-	int16 xMax;
-	int16 yMax;
+	Int16Type numberOfContours;
+	Int16Type xMin;
+	Int16Type yMin;
+	Int16Type xMax;
+	Int16Type yMax;
 }GlyphDescriptionHeader;
 
 typedef struct{
 	// GlyphDescriptionHeader
 	int16_t		numberOfContours;
-	int16		xMin;
-	int16		yMin;
-	int16		xMax;
-	int16		yMax;
+	int16_t		xMin;
+	int16_t		yMin;
+	int16_t		xMax;
+	int16_t		yMax;
 	// SimpleGlyphDescription(Body)
 	uint16_t	*endPoints;
 	uint16_t	instructionLength;
@@ -650,14 +651,14 @@ void GlyphDescriptionBuf_generateByteData(GlyphDescriptionBuf *glyphDescriptionB
 }
 
 typedef struct{
-	uint32		sfntVersion;
-	uint16		numTables;
-	uint16		searchRange;
-	uint16		entrySelector;
-	uint16		rangeShift;
+	Uint32Type	sfntVersion;
+	Uint16Type	numTables;
+	Uint16Type	searchRange;
+	Uint16Type	entrySelector;
+	Uint16Type	rangeShift;
 }OffsetTable;
 
-bool OffsetTable_init(OffsetTable *offsetTable_, uint32 sfntVersion, int numTables_)
+bool OffsetTable_init(OffsetTable *offsetTable_, Uint32Type sfntVersion, int numTables_)
 {
 	ASSERT(offsetTable_);
 
@@ -672,7 +673,7 @@ bool OffsetTable_init(OffsetTable *offsetTable_, uint32 sfntVersion, int numTabl
 		.sfntVersion		= htonl(sfntVersion),
 		.numTables		= htons(numTables_),
 		.searchRange		= htons(numTables_ * 16),
-		.entrySelector		= htons((uint16)log2(numTables_)),
+		.entrySelector		= htons((Uint16Type)log2(numTables_)),
 		.rangeShift		= htons((numTables_ * 16) - offsetTable.searchRange),
 	};
 
@@ -688,10 +689,10 @@ size_t TableSizeAlign(size_t size)
 	return size;
 }
 
-uint32 CalcTableChecksum(uint32 *table, uint32 numberOfBytesInTable)
+Uint32Type CalcTableChecksum(Uint32Type *table, Uint32Type numberOfBytesInTable)
 {
-	uint32 sum = 0;
-	uint32 nLongs = (numberOfBytesInTable + 3) / 4;
+	Uint32Type sum = 0;
+	Uint32Type nLongs = (numberOfBytesInTable + 3) / 4;
 	while (nLongs-- > 0)
 		sum += *table++;
 	return sum;
@@ -706,10 +707,10 @@ uint32_t calcChecksumWrapper(const uint8_t *data, size_t size)
 }
 
 typedef struct{
-	uint32 tag;			//!< table種別を表す識別子
-	uint32 checkSum;		//!< テーブルのチェックサム
-	uint32 offset;			//!< フォントファイル先頭からのオフセット
-	uint32 length;			//!< テーブルの長さ
+	Uint32Type tag;			//!< table種別を表す識別子
+	Uint32Type checkSum;		//!< テーブルのチェックサム
+	Uint32Type offset;			//!< フォントファイル先頭からのオフセット
+	Uint32Type length;			//!< テーブルの長さ
 }TableDirectory_Member;
 
 void TableDirectory_Member_init(TableDirectory_Member *self_, const char *tagstring, const uint8_t *tableData, size_t tableSize, uint32_t offset)
@@ -722,7 +723,7 @@ void TableDirectory_Member_init(TableDirectory_Member *self_, const char *tagstr
 	uint32_t checksum = calcChecksumWrapper(tableData, tableSize);
 
 	TableDirectory_Member self;
-	ASSERT(tag_init(&(self.tag), tagstring));
+	ASSERT(TagType_init(&(self.tag), tagstring));
 	self.checkSum	= htonl(checksum);
 	self.offset	= htonl(offset);
 	self.length	= htonl(tableSize);

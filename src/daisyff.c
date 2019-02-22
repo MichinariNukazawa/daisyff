@@ -40,8 +40,8 @@ int main(int argc, char **argv)
 			&headTable,
 			0x00010000,
 			flags,
-			LONGDATETIME_generate(timeFromStr("2019-01-01T00:00:00+00:00")),
-			LONGDATETIME_generate(timeFromStr("2019-01-01T00:00:00+00:00")),
+			LONGDATETIMEType_generate(timeFromStr("2019-01-01T00:00:00+00:00")),
+			LONGDATETIMEType_generate(timeFromStr("2019-01-01T00:00:00+00:00")),
 			(MacStyle)MacStyle_Bit6_Regular,
 			BBox_generate(0,0, 1000, 1000),
 			8
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 	OffsetTable:
 	 (Offset Subtable, sfnt)
 	*/
-	uint32 sfntVersion;
+	Uint32Type sfntVersion;
 	memcpy((uint8_t *)&sfntVersion, "OTTO", 4);
 	OffsetTable offsetTable;
 	ASSERT(OffsetTable_init(&offsetTable, sfntVersion, tableBuf.appendTableNum));
@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 	/**
 	  'head'TableにcheckSumAdjustment要素を計算して書き込む。
 	  */
-	uint32 checkSumAdjustment = 0xB1B0AFBA - CalcTableChecksum((uint32_t *)fontData, fontDataSize);
+	Uint32Type checkSumAdjustment = 0xB1B0AFBA - CalcTableChecksum((uint32_t *)fontData, fontDataSize);
 	size_t checkSumAdjustmentOffset =
 		sizeof(OffsetTable)
 		+ (sizeof(TableDirectory_Member) * tableBuf.appendTableNum)
