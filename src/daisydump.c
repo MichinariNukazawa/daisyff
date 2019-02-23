@@ -517,8 +517,8 @@ int main(int argc, char **argv)
 				return 1;
 			}
 
-			//dump0(gdata, sizeof(GlyphDescriptionHeader));
-			//dump0(&gdata[sizeof(GlyphDescriptionHeader)], 16);
+			//DUMP0(gdata, sizeof(GlyphDescriptionHeader));
+			//DUMP0(&gdata[sizeof(GlyphDescriptionHeader)], 16);
 
 			size_t pointNum = 0; //! @todo use flags from EndPoints?
 
@@ -599,7 +599,7 @@ int main(int argc, char **argv)
 						iflag, GlyphDescriptionFlag_ToPrintString(flag), flag, (isRepeated?"<repeated>":""));
 			}
 
-			//dump0(&gdata[offsetInTable], 8);
+			//DUMP0(&gdata[offsetInTable], 8);
 
 			// *** GlyphDescription.XYCoordinates
 			fprintf(stdout, "\n");

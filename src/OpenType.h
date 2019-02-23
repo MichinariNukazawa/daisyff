@@ -110,9 +110,9 @@ uint64_t htonll(uint64_t x)
 	}
 }
 
-void dump0(uint8_t *buf, size_t size)
+void DUMP0_inline_(uint8_t *buf, size_t size)
 {
-	fprintf(stdout, " 0x ");
+	//fprintf(stdout, " 0x ");
 	for(int i = 0; i < size; i++){
 		if((0 != i) && (0 == (i % 8))){
 			fprintf(stdout, "\n");
@@ -121,6 +121,8 @@ void dump0(uint8_t *buf, size_t size)
 	}
 	fprintf(stdout, "\n");
 }
+#define DUMP0(buf, size) \
+	DEBUG_LOG("DUMP0:`" #buf "`[`" #size "`]:"); DUMP0_inline_((buf), (size));
 
 // * ********
 // * Basic font format type 基本データ型
