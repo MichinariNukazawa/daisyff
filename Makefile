@@ -26,7 +26,10 @@ gdb: $(APP)
 	gdb --args $(APP) daisy-min
 
 test: test/test.c src/*.c  src/*.h include/*.h
-	gcc $< $(CFLAGS) $(INCLUDE) -o ./test.exe
+	gcc $< \
+		$(CFLAGS) \
+		$(INCLUDE) \
+		-o ./test.exe
 	./test.exe
 
 dump: src/daisydump.c src/*.h include/*.h
@@ -35,7 +38,9 @@ dump: src/daisydump.c src/*.h include/*.h
 	gcc \
 		$< \
 		$(OBJECT_DIR)/version.c \
-		$(CFLAGS) $(INCLUDE) -o ./daisydump.exe
+		$(CFLAGS) \
+		$(INCLUDE) \
+		-o ./daisydump.exe
 	./daisydump.exe daisy-min.otf
 
 com:
@@ -43,7 +48,9 @@ com:
 	ttx daisy-min.otf
 
 $(APP): src/daisyff.c src/*.h
-	gcc $< $(CFLAGS) $(INCLUDE) -o $(APP)
+	gcc $< \
+		$(CFLAGS) $(INCLUDE) \
+		-o $(APP)
 
 clean:
 	rm -rf $(APP) *.otf
