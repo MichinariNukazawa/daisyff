@@ -1,9 +1,9 @@
 
-APP=./daisyff.exe
+APP		:=./daisyff.exe
 CFLAGS		:= -std=c11 -lm -g
 INCLUDE		:= -I./ -I./include
 SOURCE_DIR	:= ./src
-OBJECT_DIR		:= ./object
+OBJECT_DIR	:= ./object
 
 SOURCES		:= $(wildcard $(SOURCE_DIR)/*.c)
 OBJECTS		:= $(subst $(SOURCE_DIR),$(OBJECT_DIR),$(SOURCES:.c=.o))
