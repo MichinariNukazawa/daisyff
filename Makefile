@@ -1,9 +1,14 @@
 
 APP		:=./daisyff.exe
-CFLAGS		:= -std=c11 -lm -g
-INCLUDE		:= -I./ -I./include
 SOURCE_DIR	:= ./src
 OBJECT_DIR	:= ./object
+
+INCLUDE		:= -I./ -I./include
+CFLAGS		:= -std=c11 -lm -g
+CFLAGS		+= -W -Wall -Wextra
+CFLAGS		+= -Werror
+CFLAGS		+= -Wno-unused-parameter
+CFLAGS		+= -Wno-sign-compare
 
 SOURCES		:= $(wildcard $(SOURCE_DIR)/*.c)
 OBJECTS		:= $(subst $(SOURCE_DIR),$(OBJECT_DIR),$(SOURCES:.c=.o))

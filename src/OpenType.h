@@ -473,7 +473,7 @@ void NameTableBuf_append(
 
 	// ** string strageを拡張して後ろに文字列データを追加
 	//DEBUG_LOG("%zu %zu", nameTableBuf->stringStrageSize, strlen(stringdata));
-	char *utf16s = convertNewUtf16FromUtf8(stringdata);
+	uint8_t *utf16s = convertNewUtf16FromUtf8(stringdata);
 	size_t newsize = nameTableBuf->stringStrageSize + utf16sSize;
 	nameTableBuf->stringStrage = (uint8_t *)ffrealloc(nameTableBuf->stringStrage, newsize);
 	memcpy(&nameTableBuf->stringStrage[nameTableBuf->stringStrageSize], utf16s, utf16sSize);

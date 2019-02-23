@@ -80,8 +80,10 @@ char *LONGDATETIMEType_ToPrintString(LONGDATETIMEType longdatetimevalue)
 
 	ASSERT(NULL != gmtime_r(&time, &tm));
 
-	char *tstring = ffmalloc(256);
-	size_t size = strftime(tstring, 256, "%Y-%m-%dT%H:%M:%S", &tm);
+	const int LEN = 256;
+	char *tstring = ffmalloc(LEN);
+	size_t size = strftime(tstring, LEN, "%Y-%m-%dT%H:%M:%S", &tm);
+	ASSERT(size < LEN);
 
 	return tstring;
 }
@@ -379,7 +381,6 @@ int main(int argc, char **argv)
 		FONT_WARN_LOG("MaxpTable not detected.");
 	}else{
 		MaxpTable_Version05 maxpTable;
-		size_t tableSize = sizeof(maxpTable);
 
 		if(! copyrange(fd, (void *)&maxpTable, ntohl(tableDirectory_MaxpTable->offset), sizeof(maxpTable))){
 			FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));

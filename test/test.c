@@ -67,9 +67,9 @@ void longdatetime_test()
 {
 	DEBUG_LOG("in");
 
-	LONGDATETIMEType t;
 	/*
 	// https://support.microsoft.com/ja-jp/help/214330/differences-between-the-1900-and-the-1904-date-system-in-excel
+	LONGDATETIMEType t;
 	t = LONGDATETIMEType_generate(timeFromStr("1904-07-05T00:00:00+00:00"));
 	DEBUG_LOG("%u", t);
 	EXPECT_EQ_UINT(34519, t);
