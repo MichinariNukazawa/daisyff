@@ -578,7 +578,7 @@ int main(int argc, char **argv)
 
 				uint8_t flag = gdata[offsetInTable];
 				gpoints[iflag].flag = flag;
-				fprintf(stdout, "	 flag %2d: %s 0x%02x\n", iflag, GlyphDescriptionFlag_ToPrintString(flag), flag);
+				//fprintf(stdout, "	 flag %2d: %s 0x%02x\n", iflag, GlyphDescriptionFlag_ToPrintString(flag), flag);
 				if(0 != (flag & (1 << 3))){
 					offsetInTable += sizeof(uint8_t);
 					uint8_t repeatNum = gdata[offsetInTable];
