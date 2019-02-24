@@ -6,6 +6,7 @@
 *.o
 
 *.swp
+*.patch
 
 /obj
 /object
