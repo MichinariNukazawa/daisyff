@@ -13,6 +13,17 @@
 #define FONT_WARN_LOG(fmt, ...) \
 	fprintf(stderr, "font warning: %s()[%d]: "fmt"\n", __func__, __LINE__, ## __VA_ARGS__)
 
+int CONVERT_INT_FROM_UINT16T(int16_t sv)
+{
+	if(0 <= sv){
+		return (int)sv;
+	}
+
+	sv *= -1;
+	int dv = (int)sv;
+	return dv *= -1;
+}
+
 uint64_t ntohll(uint64_t x)
 {
 	if(IS_LITTLE_ENDIAN()){
@@ -477,6 +488,8 @@ int main(int argc, char **argv)
 				return 1;
 			}
 
+			//DUMPUint16((uint16_t *)&glyphDescriptionHeader, sizeof(GlyphDescriptionHeader));
+
 			GlyphDescriptionHeader glyphDescriptionHeader_Host = {
 				.numberOfContours	= ntohs(glyphDescriptionHeader.numberOfContours		),
 				.xMin			= ntohs(glyphDescriptionHeader.xMin			),
@@ -518,6 +531,8 @@ int main(int argc, char **argv)
 				return 1;
 			}
 
+			//DUMPUint16((uint16_t *)gdata, sizeof(GlyphDescriptionHeader));
+			//DUMPUint16Ntohs((uint16_t *)gdata, datasize / 2);
 			//DUMP0(gdata, sizeof(GlyphDescriptionHeader));
 			//DUMP0(&gdata[sizeof(GlyphDescriptionHeader)], 16);
 
@@ -628,10 +643,8 @@ int main(int argc, char **argv)
 						offsetInTable += sizeof(uint8_t);
 					}else{
 						raw = ntohs(*(uint16_t *)(&gdata[offsetInTable]));
-						//int16_t vv;
-						//memcpy((void*)&vv, (void*)&raw, sizeof(int16_t));
-						//v = vv;
-						v = raw * -1; //! @todo @note ttxdump合わせなのだけれど理由がわからない
+						v = CONVERT_INT_FROM_UINT16T(raw);
+						v *= -1; //!< @todo 正直ttfdump合わせでよくわかってない
 						offsetInTable += sizeof(uint16_t);
 					}
 					int rel = v;
@@ -666,24 +679,9 @@ int main(int argc, char **argv)
 						v = raw;
 						offsetInTable += sizeof(uint8_t);
 					}else{
-						/*
-						uint8_t rawx[2];
-						memcpy((void*)rawx, (void*)(&gdata[offsetInTable]), sizeof(int16_t));
-						//raw = ntohs(rawx);
-						raw = (int16_t)(((uint16_t)rawx[0] << 8) | (uint16_t)rawx[1]);
-						int16_t vv;
-						memcpy((void*)(&vv), (void*)(&raw), sizeof(uint16_t));
-						v = vv;
-						v = raw * -1;
-						*/
-						//DEBUG_LOG("%04x %04x %d %d", raw, rawx, vv, v);
-						//memcpy((void*)&v, (void*)(&gdata[offsetInTable]), sizeof(int16_t));
 						raw = ntohs(*(uint16_t *)(&gdata[offsetInTable]));
-						v = raw * -1; //! @todo @note ttxdump合わせなのだけれど理由がわからない
-						//int16_t vv;
-						//memcpy((void*)&vv, (void*)&raw, sizeof(int16_t));
-						//v = vv;
-						//v = raw * -1; //! @todo @note ttxdump合わせなのだけれど理由がわからない
+						v = CONVERT_INT_FROM_UINT16T(raw);
+						v *= -1; //!< @todo 正直ttfdump合わせでよくわかってない
 						offsetInTable += sizeof(uint16_t);
 					}
 					int rel = v;
@@ -713,11 +711,12 @@ int main(int argc, char **argv)
 					(GlyphFlag_IsXShortVector(flag)? 'S':'L'),
 					((1 == gpoints[cor].isRelXSame)? 'X':'-'),
 					gpoints[cor].raw.x,
-					gpoints[cor].raw.x,
+					CONVERT_INT_FROM_UINT16T(gpoints[cor].raw.x),
 					(GlyphFlag_IsYShortVector(flag)? 'S':'L'),
 					((1 == gpoints[cor].isRelYSame)? 'X':'-'),
 					gpoints[cor].raw.y,
-					gpoints[cor].raw.y);
+					CONVERT_INT_FROM_UINT16T(gpoints[cor].raw.y)
+					);
 			}
 		}
 	}
