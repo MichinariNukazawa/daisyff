@@ -49,23 +49,25 @@ GlyphOutline GlyphOutline_Notdef()
 	// ** //! @todo flags repeat, Coodinates SHORT_VECTOR
 	GlyphOutline outline = {0};
 
+	int w; // line width
+	w = 0;
 	GlyphClosePath cpath0 = {0};
 	GlyphAnchorPoint apoints0[] = {
-		{{  50, 100},},
-		{{ 450, 100},},
-		{{ 450, 600},},
-		{{  50, 600},},
-	};
-	GlyphClosePath_addAnchorPoints(&cpath0, apoints0, sizeof(apoints0) / sizeof(apoints0[0]));
-	GlyphOutline_addClosePath(&outline, &cpath0);
-
-	int w = 10; // line width
-	GlyphClosePath cpath1 = {0};
-	GlyphAnchorPoint apoints1[] = {
 		{{  50 + w, 100 + w},},
 		{{  50 + w, 600 - w},},
 		{{ 450 - w, 600 - w},},
 		{{ 450 - w, 100 + w},},
+	};
+	GlyphClosePath_addAnchorPoints(&cpath0, apoints0, sizeof(apoints0) / sizeof(apoints0[0]));
+	GlyphOutline_addClosePath(&outline, &cpath0);
+
+	w = 50;
+	GlyphClosePath cpath1 = {0};
+	GlyphAnchorPoint apoints1[] = {
+		{{  50 + w, 100 + w},},
+		{{ 450 - w, 100 + w},},
+		{{ 450 - w, 600 - w},},
+		{{  50 + w, 600 - w},},
 	};
 	GlyphClosePath_addAnchorPoints(&cpath1, apoints1, sizeof(apoints1) / sizeof(apoints1[0]));
 	GlyphOutline_addClosePath(&outline, &cpath1);
