@@ -26,6 +26,22 @@
 		} \
 	}while(0);
 
+#define EXPECT_EQ_INT(ARG0, ARG1) \
+	do{ \
+		int ARG0V = (ARG0); \
+		int ARG1V = (ARG1); \
+		if((ARG0V) < (ARG1V)){ \
+			fprintf(stderr, "EXPECT_EQ_INT: %s()[%d]:('%s','%s') %d < %d\n", \
+					__func__, __LINE__, #ARG0, #ARG1, ARG0V, ARG1V); \
+			exit(1); \
+		} \
+		if((ARG0V) > (ARG1V)){ \
+			fprintf(stderr, "EXPECT_EQ_INT: %s()[%d]:('%s','%s') %d > %d\n", \
+					__func__, __LINE__, #ARG0, #ARG1, ARG0V, ARG1V); \
+			exit(1); \
+		} \
+	}while(0);
+
 #define EXPECT_NE_UINT(ARG0, ARG1) \
 	do{ \
 		uint64_t ARG0V = (ARG0); \
@@ -102,29 +118,31 @@ void glyphOutline0_test()
 	GlyphClosePath_addAnchorPoints(&cpath0, apoints0, sizeof(apoints0) / sizeof(GlyphAnchorPoint));
 	GlyphOutline_addClosePath(&outline, &cpath0);
 
-	GlyphDescriptionBuf gdb_;
+	GlyphDescriptionBuf gdb_ = {0};
 	GlyphDescriptionBuf *gdb = &gdb_;
-	GlyphDescriptionBuf_setOutline(gdb, &outline);
+	GlyphDescriptionBuf_generateByteDataWithOutline(gdb, &outline);
 
 	EXPECT_EQ_UINT(gdb->numberOfContours, 1);
-	EXPECT_TRUE(gdb->endPoints	!= NULL);
+	//EXPECT_TRUE(gdb->endPoints	!= NULL);
 	EXPECT_EQ_UINT(gdb->pointNum, 4);
 	EXPECT_TRUE(gdb->flags		!= NULL);
 	EXPECT_EQ_UINT(gdb->instructionLength, 0);
 	EXPECT_TRUE(gdb->instructions	== NULL);
 	EXPECT_TRUE(gdb->xCoodinates	!= NULL);
 	EXPECT_TRUE(gdb->yCoodinates	!= NULL);
+	EXPECT_EQ_UINT(gdb->dataSize, 34);
+	EXPECT_TRUE(gdb->data		!= NULL);
 
-	int16_t *xCoodinates = (int16_t *)(gdb->xCoodinates);
-	int16_t *yCoodinates = (int16_t *)(gdb->yCoodinates);
-	EXPECT_EQ_UINT(xCoodinates[0],  50);
-	EXPECT_EQ_UINT(yCoodinates[0], 100);
-	EXPECT_EQ_UINT(xCoodinates[1], 450);
-	EXPECT_EQ_UINT(yCoodinates[1], 100);
-	EXPECT_EQ_UINT(xCoodinates[2], 450);
-	EXPECT_EQ_UINT(yCoodinates[2], 600);
-	EXPECT_EQ_UINT(xCoodinates[3],  50);
-	EXPECT_EQ_UINT(yCoodinates[3], 600);
+	int16_t *xCoodinates = (int16_t *)(gdb->xCoodinates); //(int16_t *)&(gdb->data[12 + 4]);
+	int16_t *yCoodinates = (int16_t *)(gdb->yCoodinates); //(int16_t *)&(gdb->data[12 + 4]);
+	EXPECT_EQ_INT(xCoodinates[0],  50);
+	EXPECT_EQ_INT(yCoodinates[0], 100);
+	EXPECT_EQ_INT(xCoodinates[1], 450- 50);
+	EXPECT_EQ_INT(yCoodinates[1], 100-100);
+	EXPECT_EQ_INT(xCoodinates[2], 450-450);
+	EXPECT_EQ_INT(yCoodinates[2], 600-100);
+	EXPECT_EQ_INT(xCoodinates[3],  50-450);
+	EXPECT_EQ_INT(yCoodinates[3], 600-600);
 
 	DEBUG_LOG("out");
 }
@@ -148,10 +166,60 @@ void glyphDescriptionBufEmpty_test()
 	};
 
 	GlyphDescriptionBuf glyphDescriptionBuf = {0};
-	GlyphDescriptionBuf_generateByteData(&glyphDescriptionBuf);
+	GlyphOutline outline_Empty = {0};
+	GlyphDescriptionBuf_generateByteDataWithOutline(&glyphDescriptionBuf, &outline_Empty);
 
 	EXPECT_EQ_UINT(glyphDescriptionBuf.dataSize, sizeof(dstarray));
 	EXPECT_EQ_ARRAY(glyphDescriptionBuf.data, dstarray, sizeof(dstarray))
+
+	DEBUG_LOG("out");
+}
+
+void glyphDescriptionBufNotdefNoCompression_test()
+{
+	DEBUG_LOG("in");
+
+	uint16_t dataarray0[] = {
+			2, // int16 numberOfContours;
+			0, // int16 xMin;
+			0, // int16 yMin;
+			1000, // int16 xMax; = 1000
+			1000, // int16 yMax; = 1000
+			3, 7, //uint16_t	*endPoints;
+			0x0000, //uint16_t	instructionLength;
+			//uint8_t		*instructions;
+			//uint8_t		*flags;
+			0x0101, 0x0101, 0x0101, 0x0101,
+			//0, 0, 0, 0, 0, 0, 0, 0,
+			//int16_t		*xCoodinates; // Coodinatesは実装から出した仮の値
+			// 0, 0, 0, 0, 0, 0, 0, 0,
+			0x0032,0x0190,0x0000,0xfe70, 0x000a,0x0000,0x017c,0x0000,
+			//int16_t		*yCoodinates;
+			//0, 0, 0, 0, 0, 0, 0, 0,
+			0x0064,0x0000,0x01f4,0x0000, 0xfe16,0x01e0,0x0000,0xfe20,
+	};
+	const size_t len16 = sizeof(dataarray0) / sizeof(dataarray0[0]);
+	uint16_t dataarray1[len16];
+	for(int i = 0; i < (int)len16; i++){dataarray1[i] = ntohs(dataarray0[i]);}
+	const size_t len32 = len16 * 2;
+	uint8_t dataarray[len32];
+	uint8_t *d = (uint8_t *)dataarray1;
+	memcpy(dataarray, d, len32);
+	DEBUG_LOG("%zu %zu", len16, len32);
+
+	GlyphDescriptionBuf glyphDescriptionBuf_Notdef = {0};
+	GlyphOutline notdefOutline = GlyphOutline_Notdef();
+	GlyphDescriptionBuf_generateByteDataWithOutline(&glyphDescriptionBuf_Notdef, &notdefOutline);
+
+	//DUMP0(glyphDescriptionBuf_Notdef.data, glyphDescriptionBuf_Notdef.dataSize);
+	//DUMP0(dataarray, sizeof(dataarray));
+	//DUMPUint16Ntohs((uint16_t *)glyphDescriptionBuf_Notdef.data, glyphDescriptionBuf_Notdef.dataSize / 2);
+	//DUMPUint16((uint16_t *)glyphDescriptionBuf_Notdef.data, glyphDescriptionBuf_Notdef.dataSize / 2);
+	//DUMPUint16((uint16_t *)dataarray, sizeof(dataarray) / 2);
+
+	EXPECT_EQ_UINT(glyphDescriptionBuf_Notdef.dataSize, sizeof(dataarray));
+	EXPECT_EQ_ARRAY(glyphDescriptionBuf_Notdef.data, dataarray, sizeof(dataarray) - (8 * 2 * sizeof(uint16_t)))
+	EXPECT_EQ_ARRAY(glyphDescriptionBuf_Notdef.data, dataarray, sizeof(dataarray))
 
 	DEBUG_LOG("out");
 }
@@ -162,6 +230,7 @@ int main()
 	longdatetime_test();
 	glyphOutline0_test();
 	glyphDescriptionBufEmpty_test();
+	glyphDescriptionBufNotdefNoCompression_test();
 
 	fprintf(stdout, "success.\n");
 

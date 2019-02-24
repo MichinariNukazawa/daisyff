@@ -3,7 +3,6 @@
   @author michianri.nukazawa@gmail.com / project daisy bell
   @details license: MIT
  */
-
 #ifndef DAISYFF_OPEN_TYPE_HPP_
 #define DAISYFF_OPEN_TYPE_HPP_
 
@@ -13,116 +12,17 @@
 
 #include <stdlib.h>
 
-#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <string.h>
 #include <math.h>
 #include <errno.h>
-#include <ctype.h>
-#include <assert.h>
-#include <stdlib.h>
-#include <arpa/inet.h>
-#include <stddef.h>
-#include <byteswap.h>
 
-//* ********
-//* Utils
-//* ********
-
-#define ERROR_LOG(fmt, ...) \
-	fprintf(stderr, "error: %s()[%d]: "fmt"\n", __func__, __LINE__, ## __VA_ARGS__)
-#define WARN_LOG(fmt, ...) \
-	fprintf(stderr, "warning: %s()[%d]: "fmt"\n", __func__, __LINE__, ## __VA_ARGS__)
-#define DEBUG_LOG(fmt, ...) \
-	fprintf(stdout, "debug: %s()[%d]: "fmt"\n", __func__, __LINE__, ## __VA_ARGS__)
-#define ASSERT(hr) \
-	do{ \
-		if(!(hr)){ \
-			fprintf(stderr, "pv assert: %s()[%d]:'%s'\n", __func__, __LINE__, #hr); \
-			exit(1); \
-		} \
-	}while(0);
-
-#define ASSERTF(hr, fmt, ...) \
-	do{ \
-		if(!(hr)){ \
-			fprintf(stderr, "pv_assertf: %s()[%d]:'%s' "fmt"\n", \
-					__func__, __LINE__, #hr, ## __VA_ARGS__); \
-			exit(1); \
-		} \
-	}while(0);
-
-#define sprintf_new(res, fmt, ...) \
-	do{ \
-		ASSERT(0 < strlen(fmt)); \
-		size_t n = snprintf(NULL, 0, fmt, ## __VA_ARGS__); \
-		ASSERT(0 < n); \
-		res = (char *)ffmalloc(n + 1); \
-		snprintf(res, n+1, fmt, ## __VA_ARGS__); \
-	}while(0);
-
-void *ffmalloc_inline_(size_t size, const char *strsize, const char *func, int line)
-{
-	void *p = malloc(size);
-	if(NULL == p){
-		fprintf(stderr, "critical: %s()[%d]:ffmalloc(%s)\n", func, line, strsize);
-		exit(1);
-	}
-	memset(p, 0, size);
-
-	return p;
-}
-#define ffmalloc(size) ffmalloc_inline_((size), #size, __func__, __LINE__)
-
-void *ffrealloc_inline_(
-		void *srcp, size_t size,
-		const char *strsrcp, const char *strsize,
-		const char *func, int line)
-{
-	void *dstp = realloc(srcp, size);
-	if(NULL == dstp){
-		fprintf(stderr, "critical: %s()[%d]:ffrealloc(%s, %s)'\n", func, line, strsrcp, strsize);
-		exit(1);
-	}
-
-	return dstp;
-}
-#define ffrealloc(srcp, size) ffrealloc_inline_((srcp), (size), #srcp, #size, __func__, __LINE__)
-
-// http://www.math.kobe-u.ac.jp/HOME/kodama/tips-C-endian.html
-bool IS_LITTLE_ENDIAN()
-{
-        int i = 1;
-        return (bool)(*(char*)&i);
-}
-
-uint64_t htonll(uint64_t x)
-{
-	if(IS_LITTLE_ENDIAN()){
-		return bswap_64(x);
-	}else{
-		return x;
-	}
-}
-
-void DUMP0_inline_(uint8_t *buf, size_t size)
-{
-	//fprintf(stdout, " 0x ");
-	for(int i = 0; i < size; i++){
-		if((0 != i) && (0 == (i % 8))){
-			fprintf(stdout, "\n");
-		}
-		fprintf(stdout, "%02x-", buf[i]);
-	}
-	fprintf(stdout, "\n");
-}
-#define DUMP0(buf, size) \
-	DEBUG_LOG("DUMP0:`" #buf "`[`" #size "`]:"); DUMP0_inline_((buf), (size));
+#include "src/Util.h"
+#include "src/GlyphOutline.h"
 
 // * ********
 // * Basic font format type 基本データ型
@@ -575,34 +475,70 @@ typedef struct{
 	int16_t		xMax;
 	int16_t		yMax;
 	// SimpleGlyphDescription(Body)
-	uint16_t	*endPoints;
+	//uint16_t	*endPoints;
 	uint16_t	instructionLength;
 	uint8_t		*instructions;
+	// for debug
 	uint8_t		*flags;
-	uint8_t		*xCoodinates;
-	uint8_t		*yCoodinates;
-	//
+	int16_t		*xCoodinates;
+	int16_t		*yCoodinates;
 	size_t		pointNum;
 	//
 	size_t		dataSize;
 	uint8_t		*data;
 }GlyphDescriptionBuf;
 
-void GlyphDescriptionBuf_generateByteData(GlyphDescriptionBuf *glyphDescriptionBuf)
+void GlyphDescriptionBuf_generateByteDataWithOutline(
+		GlyphDescriptionBuf *glyphDescriptionBuf,
+		const GlyphOutline *outline)
 {
 	ASSERT(glyphDescriptionBuf);
 	ASSERT(NULL == glyphDescriptionBuf->data);
 
-	// byte dataメモリ確保
+	// ** pointNumカウントとEndPoints収集を行う
+	//ASSERT(0 < outline->closePathNum);
+	glyphDescriptionBuf->numberOfContours = outline->closePathNum;
+	uint16_t *endPoints = ffmalloc(sizeof(uint16_t) * glyphDescriptionBuf->numberOfContours);
+	size_t pointNum = 0;
+	for(int l = 0; l < outline->closePathNum; l++){
+		const GlyphClosePath *closePath = &(outline->closePaths[l]);
+		ASSERT(0 < closePath->anchorPointNum);
+		pointNum += closePath->anchorPointNum;
+		endPoints[l] = pointNum - 1;
+	}
+
+	// ** flags,x,yCoodinates収集を行う // @todo 短縮・SHORT_VECTOR
+	uint8_t *flags = ffmalloc(sizeof(uint8_t) * pointNum);
+	int16_t *xCoodinates = ffmalloc(sizeof(int16_t) * pointNum);
+	int16_t *yCoodinates = ffmalloc(sizeof(int16_t) * pointNum);
+	int n = 0;
+	int16_t prex = 0;
+	int16_t prey = 0;
+	for(int l = 0; l < outline->closePathNum; l++){
+		const GlyphClosePath *closePath = &(outline->closePaths[l]);
+		for(int ai = 0; ai < closePath->anchorPointNum; ai++){
+			const GlyphAnchorPoint *ap = &(closePath->anchorPoints[ai]);
+			flags[n] = 0x01;
+			xCoodinates[n] = (ap->point).x - prex;
+			yCoodinates[n] = (ap->point).y - prey;
+			prex = (ap->point).x;
+			prey = (ap->point).y;
+			n++;
+		}
+	}
+	ASSERT_EQ_INT(pointNum, n);
+
+	// ** byte dataメモリ確保
 	glyphDescriptionBuf->dataSize
 		= sizeof(GlyphDescriptionHeader)				// GlyphDescriptionHeader
 		+ (sizeof(uint16_t) * glyphDescriptionBuf->numberOfContours)	// endPoints[numberOfContours]
 		+ (sizeof(uint16_t))						// instructionLength
 		+ (sizeof(uint8_t) * glyphDescriptionBuf->instructionLength)	// instructions[instructionLength]
-		+ (sizeof(uint8_t) * glyphDescriptionBuf->pointNum)		// flags[] // 短縮は未実装
-		+ (sizeof(int16_t) * glyphDescriptionBuf->pointNum)		// xCoodinates[] // SHORT_VECTORは未実装
-		+ (sizeof(int16_t) * glyphDescriptionBuf->pointNum)		// yCoodinates[] // SHORT_VECTORは未実装
+		+ (sizeof(uint8_t) * pointNum)		// flags[] // 短縮は未実装
+		+ (sizeof(int16_t) * pointNum)		// xCoodinates[] // SHORT_VECTORは未実装
+		+ (sizeof(int16_t) * pointNum)		// yCoodinates[] // SHORT_VECTORは未実装
 		;
+	//DEBUG_LOG("glyphDescriptionBuf->dataSize:%zu", glyphDescriptionBuf->dataSize);
 	glyphDescriptionBuf->data = ffmalloc(glyphDescriptionBuf->dataSize);
 
 	GlyphDescriptionHeader glyphDescriptionHeader = {
@@ -620,15 +556,9 @@ void GlyphDescriptionBuf_generateByteData(GlyphDescriptionBuf *glyphDescriptionB
 	wsize = sizeof(GlyphDescriptionHeader);
 	memcpy(&(glyphDescriptionBuf->data[offset]), &glyphDescriptionHeader, wsize);
 	offset += wsize;
-	// numberOfContours
-	wsize = sizeof(int16_t);
-	v16 = htons(glyphDescriptionBuf->numberOfContours);
-	memcpy(&(glyphDescriptionBuf->data[offset]), &v16, wsize);
-	offset += wsize;
 	// endPoints[numberOfContours]
-	wsize = (sizeof(uint16_t) * glyphDescriptionBuf->numberOfContours);
-	memcpy(&(glyphDescriptionBuf->data[offset]), glyphDescriptionBuf->endPoints, wsize);
-	offset += wsize;
+	htonArray16(&(glyphDescriptionBuf->data[offset]), endPoints, glyphDescriptionBuf->numberOfContours);
+	offset += sizeof(uint16_t) * glyphDescriptionBuf->numberOfContours;
 	// instructionLength
 	wsize = sizeof(uint16_t);
 	v16 = htons(glyphDescriptionBuf->instructionLength);
@@ -639,17 +569,23 @@ void GlyphDescriptionBuf_generateByteData(GlyphDescriptionBuf *glyphDescriptionB
 	memcpy(&(glyphDescriptionBuf->data[offset]), glyphDescriptionBuf->instructions, wsize);
 	offset += wsize;
 	// flags[] // 短縮は未実装
-	wsize = (sizeof(uint8_t) * glyphDescriptionBuf->pointNum);
-	memcpy(&(glyphDescriptionBuf->data[offset]), glyphDescriptionBuf->flags, wsize);
+	wsize = (sizeof(uint8_t) * pointNum);
+	memcpy(&(glyphDescriptionBuf->data[offset]), flags, wsize);
 	offset += wsize;
 	// xCoodinates[] // SHORT_VECTORは未実装
-	wsize = (sizeof(int16_t) * glyphDescriptionBuf->pointNum);
-	memcpy(&(glyphDescriptionBuf->data[offset]), glyphDescriptionBuf->xCoodinates, wsize);
+	wsize = (sizeof(int16_t) * pointNum);
+	htonArray16(&(glyphDescriptionBuf->data[offset]), (uint16_t *)xCoodinates, pointNum);
 	offset += wsize;
 	// yCoodinates[] // SHORT_VECTORは未実装
-	wsize = (sizeof(int16_t) * glyphDescriptionBuf->pointNum);
-	memcpy(&(glyphDescriptionBuf->data[offset]), glyphDescriptionBuf->yCoodinates, wsize);
+	wsize = (sizeof(int16_t) * pointNum);
+	htonArray16(&(glyphDescriptionBuf->data[offset]), (uint16_t *)yCoodinates, pointNum);
 	offset += wsize;
+
+	// デバッグ情報を残す
+	glyphDescriptionBuf->flags		= flags;
+	glyphDescriptionBuf->xCoodinates	= xCoodinates;
+	glyphDescriptionBuf->yCoodinates	= yCoodinates;
+	glyphDescriptionBuf->pointNum		= pointNum;
 }
 
 typedef struct{
