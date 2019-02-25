@@ -6,6 +6,23 @@
 
 #include "src/OpenType.h"
 
+GlyphOutline GlyphOutline_A()
+{
+	// ** //! @todo flags repeat, Coodinates SHORT_VECTOR
+	GlyphOutline outline = {0};
+
+	GlyphClosePath cpath0 = {0};
+	GlyphAnchorPoint apoints0[] = {
+		{{  50, 100},},
+		{{ 250, 600},},
+		{{ 450, 100},},
+		{{ 250, 180},},
+	};
+	GlyphClosePath_addAnchorPoints(&cpath0, apoints0, sizeof(apoints0) / sizeof(apoints0[0]));
+	GlyphOutline_addClosePath(&outline, &cpath0);
+
+	return outline;
+}
 int main(int argc, char **argv)
 {
 	/**
@@ -62,13 +79,26 @@ int main(int argc, char **argv)
 			);
 
 	/**
+	  'glyf' Table
+	  and 'loca' Table (glyph descriptions offset)
+	  */
+	GlyphTablesBuf glyphTablesBuf;
+	GlyphTablesBuf_init(&glyphTablesBuf);
+
+	GlyphDescriptionBuf glyphDescriptionBuf_A = {0};
+	GlyphOutline outline_A = GlyphOutline_A();
+	GlyphDescriptionBuf_generateByteDataWithOutline(&glyphDescriptionBuf_A, &outline_A);
+
+	GlyphTablesBuf_appendSimpleGlyph(&glyphTablesBuf, 'A', &glyphDescriptionBuf_A);
+	GlyphTablesBuf_finally(&glyphTablesBuf);
+
+	/**
 	'maxp' Table:
 	 使用グリフ数。
 	 TrueType必須Table。
 	*/
-	int numGlyphs = 0;
 	MaxpTable_Version05 maxpTable_Version05;
-	ASSERT(MaxpTable_Version05_init(&maxpTable_Version05, numGlyphs));
+	ASSERT(MaxpTable_Version05_init(&maxpTable_Version05, glyphTablesBuf.numGlyphs));
 
 	/**
 	TableDiectoryを生成しつつ、Tableをバイト配列に変換して繋げていく。
@@ -83,6 +113,9 @@ int main(int argc, char **argv)
 	Tablebuf_appendTable(&tableBuf, "head", (void *)(&headTable), sizeof(HeadTable));
 	Tablebuf_appendTable(&tableBuf, "name", (void *)(nameTableBuf.data), nameTableBuf.dataSize);
 	Tablebuf_appendTable(&tableBuf, "maxp", (void *)(&maxpTable_Version05), sizeof(MaxpTable_Version05));
+	Tablebuf_appendTable(&tableBuf, "cmap", (void *)(glyphTablesBuf.cmapData), glyphTablesBuf.cmapDataSize);
+	Tablebuf_appendTable(&tableBuf, "loca", (void *)(glyphTablesBuf.locaData), glyphTablesBuf.locaDataSize);
+	Tablebuf_appendTable(&tableBuf, "glyf", (void *)(glyphTablesBuf.glyfData), glyphTablesBuf.glyfDataSize);
 
 	// offsetは、Tableのフォントファイル先頭からのオフセット。先に計算しておく。
 	const size_t offsetHeadSize = sizeof(OffsetTable) + (sizeof(TableDirectory_Member) * tableBuf.appendTableNum);
@@ -94,6 +127,7 @@ int main(int argc, char **argv)
 	*/
 	Uint32Type sfntVersion;
 	memcpy((uint8_t *)&sfntVersion, "OTTO", 4);
+	//sfntVersion = 0x00010000;
 	OffsetTable offsetTable;
 	ASSERT(OffsetTable_init(&offsetTable, sfntVersion, tableBuf.appendTableNum));
 
