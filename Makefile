@@ -5,6 +5,7 @@ OBJECT_DIR	:= ./object
 
 INCLUDE		:= -I./ -I./include
 CFLAGS		:= -std=c11 -lm -g
+CFLAGS		+= -fno-strict-aliasing
 CFLAGS		+= -W -Wall -Wextra
 CFLAGS		+= -Werror
 CFLAGS		+= -Wno-unused-parameter
