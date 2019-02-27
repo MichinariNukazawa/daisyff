@@ -673,10 +673,9 @@ void GlyphTablesBuf_appendSimpleGlyph(
 	//DUMPUint16((uint16_t *)glyphDescriptionBuf->data, glyphDescriptionBuf->dataSize);
 
 	// ** 'glyf' Table
-	glyphTablesBuf->glyfData = (uint8_t *)realloc(
+	glyphTablesBuf->glyfData = (uint8_t *)ffrealloc(
 			glyphTablesBuf->glyfData,
 			glyphTablesBuf->glyfDataSize + glyphDescriptionBuf->dataSize);
-	ASSERT(glyphTablesBuf->glyfData);
 	memcpy(&glyphTablesBuf->glyfData[glyphTablesBuf->glyfDataSize],
 			glyphDescriptionBuf->data,
 			glyphDescriptionBuf->dataSize);
@@ -750,13 +749,7 @@ void GlyphTablesBuf_init(GlyphTablesBuf *glyphTablesBuf)
 	};
 
 	// ** 'cmap' Table バッファ確保
-	//glyphTablesBuf->cmapSubtableFormat0Buf = (uint8_t *)realloc(
-	//		glyphTablesBuf->cmapSubtableFormat0Buf, sizeof(uint8_t) * (glyphTablesBuf->numGlyphs + 1));
-	//glyphTablesBuf->cmapSubtableFormat0Buf[glyphTablesBuf->numGlyphs] = c;
-	if(NULL == glyphTablesBuf->cmapSubtableFormat0Buf){
-		glyphTablesBuf->cmapSubtableFormat0Buf = (uint8_t *)malloc(sizeof(uint8_t) * 256);
-		memset(glyphTablesBuf->cmapSubtableFormat0Buf, 0, sizeof(uint8_t) * 256);
-	}
+	glyphTablesBuf->cmapSubtableFormat0Buf = (uint8_t *)ffmalloc(sizeof(uint8_t) * 256);
 
 	// ** .notdefなどデフォルトの文字を追加
 	// .notdef
