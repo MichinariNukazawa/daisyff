@@ -113,10 +113,12 @@ uint64_t htonll(uint64_t x)
 
 void htonArray16(uint8_t *buf8, const uint16_t *array16, size_t array16Num)
 {
-	uint16_t *buf16 = (uint16_t *)buf8;
+	uint16_t *buf16 = (uint16_t *)ffmalloc(sizeof(uint16_t) * array16Num);
 	for(int i = 0; i < array16Num; i++){
 		buf16[i] = htons(array16[i]);
 	}
+	memcpy(buf8, (uint8_t *)buf16, sizeof(uint16_t) * array16Num);
+	free(buf16);
 }
 
 void DUMP0_inline_(uint8_t *buf, size_t size)
