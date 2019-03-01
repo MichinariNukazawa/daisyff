@@ -220,6 +220,12 @@ bool GlyphFlag_IsSameOrPisitiveYShortVector(uint8_t flag)
 	return (0 != (flag & (0x1 << 5)));
 }
 
+#define COPYRANGE_OR_DIE(a, b, c, d) \
+	if(! copyrange(a, b, c, d)){ \
+		FONT_ERROR_LOG("COPYRANGE_OR_DIE: %d %s", errno, strerror(errno)); \
+		exit(1); \
+	}
+
 bool copyrange(int fd, uint8_t *buf, size_t offset, size_t size)
 {
 	errno = 0;
@@ -328,10 +334,7 @@ int main(int argc, char **argv)
 	}else{
 		HeadTable headTable;
 
-		if(! copyrange(fd, (void *)&headTable, ntohl(tableDirectory_HeadTable->offset), sizeof(headTable))){
-			FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));
-			return 1;
-		}
+		COPYRANGE_OR_DIE(fd, (void *)&headTable, ntohl(tableDirectory_HeadTable->offset), sizeof(headTable));
 
 		HeadTable headTable_Host = HeadTable_ToHostByteOrder(headTable);
 		const char *macstyleprintstring = MacStyle_toStringForNameTable(headTable_Host.macStyle);
@@ -393,10 +396,7 @@ int main(int argc, char **argv)
 	}else{
 		MaxpTable_Version05 maxpTable;
 
-		if(! copyrange(fd, (void *)&maxpTable, ntohl(tableDirectory_MaxpTable->offset), sizeof(maxpTable))){
-			FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));
-			return 1;
-		}
+		COPYRANGE_OR_DIE(fd, (void *)&maxpTable, ntohl(tableDirectory_MaxpTable->offset), sizeof(maxpTable));
 
 		// MaxpTable Version 0.5
 		MaxpTable_Version05 maxpTable_Host = MaxpTable_ToHostByteOrder(maxpTable);
@@ -428,10 +428,7 @@ int main(int argc, char **argv)
 		size_t tableSize = locaOffsetSize * (maxpTable_Host_numGlyphs + 1);
 		uint8_t locaTable[tableSize];
 
-		if(! copyrange(fd, (void *)&locaTable, ntohl(tableDirectory_LocaTable->offset), sizeof(locaTable))){
-			FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));
-			return 1;
-		}
+		COPYRANGE_OR_DIE(fd, (void *)&locaTable, ntohl(tableDirectory_LocaTable->offset), sizeof(locaTable));
 
 		// LocaTable short,long
 		fprintf(stdout, "\n");
@@ -483,10 +480,7 @@ int main(int argc, char **argv)
 
 			// *** GlyphDescription.Header
 			GlyphDescriptionHeader glyphDescriptionHeader;
-			if(! copyrange(fd, (void *)&glyphDescriptionHeader, ntohl(tableDirectory_GlyfTable->offset) + offsetOnTable, sizeof(GlyphDescriptionHeader))){
-				FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));
-				return 1;
-			}
+			COPYRANGE_OR_DIE(fd, (void *)&glyphDescriptionHeader, ntohl(tableDirectory_GlyfTable->offset) + offsetOnTable, sizeof(GlyphDescriptionHeader));
 
 			//DUMPUint16((uint16_t *)&glyphDescriptionHeader, sizeof(GlyphDescriptionHeader));
 
@@ -526,10 +520,7 @@ int main(int argc, char **argv)
 			//! @todo check GlyphDescription elemetns on memory data range.
 
 			uint8_t *gdata = ffmalloc(datasize);
-			if(! copyrange(fd, gdata, ntohl(tableDirectory_GlyfTable->offset) + offsetOnTable, datasize)){
-				FONT_ERROR_LOG("copyrange: %d %s", errno, strerror(errno));
-				return 1;
-			}
+			COPYRANGE_OR_DIE(fd, gdata, ntohl(tableDirectory_GlyfTable->offset) + offsetOnTable, datasize);
 
 			//DUMPUint16((uint16_t *)gdata, sizeof(GlyphDescriptionHeader));
 			//DUMPUint16Ntohs((uint16_t *)gdata, datasize / 2);
