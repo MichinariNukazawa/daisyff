@@ -610,6 +610,22 @@ typedef struct{
 	Uint8Type		glyphIdArray[256];
 }CmapTable_CmapSubtable_Format0;
 
+typedef struct{
+	Uint16Type	format;				//
+	Uint16Type	length;				//
+	Uint16Type	language;			//
+	Uint16Type	segCountX2;			//
+	Uint16Type	searchRange;			//
+	Uint16Type	entrySelector;			//
+	Uint16Type	rangeShift;			//
+	Uint16Type	*endCode;			// endCode[segCount]
+	Uint16Type	reservedPad;			// reservedPad
+	Uint16Type	*startCode;			// startCode[segCount]
+	Int16Type	*idDelta;			// idDelta[segCount]
+	Uint16Type	*idRangeOffset;			// idRangeOffset[segCount]
+	Uint16Type	*glyphIdArray;			// glyphIdArray[ ]
+}CmapTable_CmapSubtable_Format4Buf;
+
 void CmapTableHeader_init(CmapTableHeader *cmapTableHeader)
 {
 	*cmapTableHeader = (CmapTableHeader){

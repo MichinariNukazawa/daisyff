@@ -40,6 +40,18 @@ uint64_t ntohll(uint64_t x)
 	}
 }
 
+void ntohArray16Move(uint8_t *buf8, const uint16_t *array16, size_t array16Num)
+{
+	// uint16_tの場合は逆変換するだけ
+	htonArray16Move(buf8, array16, array16Num);
+}
+
+void ntohArray16(uint16_t *array16, size_t array16Num)
+{
+	uint8_t *buf8 = (uint8_t *)array16; // 自身へmove
+	ntohArray16Move(buf8, array16, array16Num);
+}
+
 TagType TagType_Generate(const char *tagstring)
 {
 	ASSERT(tagstring);
@@ -349,11 +361,14 @@ bool GlyphFlag_IsSameOrPisitiveYShortVector(uint8_t flag)
 	return (0 != (flag & (0x1 << 5)));
 }
 
-#define COPYRANGE_OR_DIE(a, b, c, d) \
-	if(! copyrange(a, b, c, d)){ \
-		FONT_ERROR_LOG("COPYRANGE_OR_DIE: %d %s", errno, strerror(errno)); \
-		exit(1); \
-	}
+#define COPYRANGE_OR_DIE(ARG_fd, ARG_buf, ARG_offset, ARG_size) \
+	do{ \
+		int fd_ = (ARG_fd); void *buf_ = (ARG_buf); size_t offset_ = (ARG_offset); size_t size_ = (ARG_size); \
+		if(! copyrange(fd_, buf_, offset_, size_)){ \
+			FONT_ERROR_LOG("COPYRANGE_OR_DIE: %d %s %d %p %zu %zu", errno, strerror(errno), fd_, buf_, offset_, size_); \
+			exit(1); \
+		} \
+	}while(0);
 
 bool copyrange(int fd, uint8_t *buf, size_t offset, size_t size)
 {
@@ -374,6 +389,14 @@ bool copyrange(int fd, uint8_t *buf, size_t offset, size_t size)
 	return true;
 }
 
+/*
+#define DEBUG_RANGE(ARG_fd, ARG_offset, ARG_size) \
+	do{ \
+		int fd_ = (ARG_fd); size_t offset_ = (ARG_offset); size_t size_ = (ARG_size); \
+		void *buf_ = ffmalloc(size_); \
+		COPYRANGE_OR_DIE(fd_, buf_, offset_, size_); \
+	}while(0);
+*/
 void readTableDirectory(
 		TableDirectory_Member **pTableDirectory,
 		size_t numTables,
@@ -534,7 +557,7 @@ void cmapTable_Format0(TableDirectory_Member *tableDirectory_CmapTable, int fd, 
 		languageId);
 
 	FONT_ASSERT(6 + 256 >= length); // Format0 fullsize
-	FONT_ASSERT(6 <= length);
+	FONT_ASSERT(6 <= length); // Format0 fixed length head size
 
 	uint8_t glyphIdArray[256];
 	COPYRANGE_OR_DIE(fd, (void *)glyphIdArray, ntohl(tableDirectory_CmapTable->offset) + subtableOffset + HEADER_SIZE, length - HEADER_SIZE);
@@ -549,6 +572,147 @@ void cmapTable_Format0(TableDirectory_Member *tableDirectory_CmapTable, int fd, 
 		fprintf(stdout, "%3d,", glyphIdArray[g]);
 	}
 	fprintf(stdout, "}\n");
+}
+
+void cmapTable_Format4(TableDirectory_Member *tableDirectory_CmapTable, int fd, size_t subtableOffset)
+{
+	// ** CmapSubtableFormat4 FixedLengthHead
+	size_t FIXED_LENGTH_HEAD_SIZE = sizeof(Uint16Type) * 7;
+	uint16_t header[3];
+	COPYRANGE_OR_DIE(fd, (void *)header, ntohl(tableDirectory_CmapTable->offset) + subtableOffset, sizeof(header));
+	uint16_t length = htons(header[1]);
+	uint16_t languageId = htons(header[2]);
+	fprintf(stdout,
+		"		 Length:     %3d(limited to header(6) + 256)\n"
+		"		 Language:   %3d\n",
+		length,
+		languageId);
+
+	FONT_ASSERT(FIXED_LENGTH_HEAD_SIZE <= length); // Format4 fixed length head size
+
+	// ** read fixed length elements of head
+	// segment listの最適化された検索パラメタ 先頭固定長領域を取ってくる
+	CmapTable_CmapSubtable_Format4Buf format4buf_Host = {0};
+	COPYRANGE_OR_DIE(fd, (void *)&format4buf_Host, ntohl(tableDirectory_CmapTable->offset) + subtableOffset, FIXED_LENGTH_HEAD_SIZE);
+	ntohArray16((void *)&format4buf_Host, FIXED_LENGTH_HEAD_SIZE);
+
+	uint16_t segCount	= format4buf_Host.segCountX2 / 2;
+	uint16_t searchRange	= (2 * 2 * (int)floor(log2(segCount)));
+	uint16_t entrySelector	= ((int)log2(searchRange/2.0));
+	uint16_t rangeShift	= 2 * segCount - searchRange;
+
+	fprintf(stdout,
+		//"		 format		%4u\n"
+		//"		 length		%4u\n"
+		//"		 language	%4u\n"
+		"		 segCountX2:	%4u (%4u: segCount)\n"
+		"		 searchRange:	%4u (%4u = 2x(2**floor(log2(segCount))))\n"
+		"		 entrySelector:	%4u (%4u = log2(searchRange/2))\n"
+		"		 rangeShift:	%4u (%4u = 2xsegCount - searchRange)\n",
+		//format4buf_Host.format,
+		//format4buf_Host.length,
+		//format4buf_Host.language,
+		format4buf_Host.segCountX2,
+		segCount,
+		format4buf_Host.searchRange,
+		searchRange,
+		format4buf_Host.entrySelector,
+		entrySelector,
+		format4buf_Host.rangeShift,
+		rangeShift);
+
+	// ** read variable length elements (segCount)
+	size_t offsetInSubtable = subtableOffset;
+	offsetInSubtable += FIXED_LENGTH_HEAD_SIZE;
+
+	// *** メモリ確保
+	format4buf_Host.endCode		= ffmalloc(sizeof(Uint16Type) * segCount);
+	format4buf_Host.startCode	= ffmalloc(sizeof(Uint16Type) * segCount);
+	format4buf_Host.idDelta		= ffmalloc(sizeof(Uint16Type) * segCount);
+	format4buf_Host.idRangeOffset	= ffmalloc(sizeof(Uint16Type) * segCount);
+	//format4buf_Host.glyphIdArray	= ffmalloc(sizeof(Uint16Type) * segCount);
+
+	// *** endCode
+	COPYRANGE_OR_DIE(fd, (void *)format4buf_Host.endCode,
+			ntohl(tableDirectory_CmapTable->offset) + offsetInSubtable,
+			sizeof(Uint16Type) * segCount);
+	ntohArray16((void *)format4buf_Host.endCode, sizeof(Uint16Type) * segCount);
+	offsetInSubtable += sizeof(Uint16Type) * segCount;
+	// *** reservedPad
+	offsetInSubtable += sizeof(Uint16Type);
+	// *** startCode
+	COPYRANGE_OR_DIE(fd, (void *)format4buf_Host.startCode,
+			ntohl(tableDirectory_CmapTable->offset) + offsetInSubtable,
+			sizeof(Uint16Type) * segCount);
+	ntohArray16((void *)format4buf_Host.startCode, sizeof(Uint16Type) * segCount);
+	offsetInSubtable += sizeof(Uint16Type) * segCount;
+	// *** idDelta
+	COPYRANGE_OR_DIE(fd, (void *)format4buf_Host.idDelta,
+			ntohl(tableDirectory_CmapTable->offset) + offsetInSubtable,
+			sizeof(Uint16Type) * segCount);
+	ntohArray16((void *)format4buf_Host.idDelta, sizeof(Uint16Type) * segCount);
+	offsetInSubtable += sizeof(Uint16Type) * segCount;
+	// *** idRangeOffset
+	COPYRANGE_OR_DIE(fd, (void *)format4buf_Host.idRangeOffset,
+			ntohl(tableDirectory_CmapTable->offset) + offsetInSubtable,
+			sizeof(Uint16Type) * segCount);
+	ntohArray16((void *)format4buf_Host.idRangeOffset, sizeof(Uint16Type) * segCount);
+	offsetInSubtable += sizeof(Uint16Type) * segCount;
+
+	// ** segments summary
+	for(int seg = 0; seg < segCount; seg++){
+		fprintf(stdout,
+			"		 Seg %2d/%2u: startCode=0x%04x,end=0x%04x,delta=%5d,rangeOffset=%5u\n",
+			seg,
+			segCount,
+			format4buf_Host.startCode[seg],
+			format4buf_Host.endCode[seg],
+			CONVERT_INT_FROM_UINT16T(format4buf_Host.idDelta[seg]),
+			format4buf_Host.idRangeOffset[seg]);
+	}
+
+	// ** segment
+	for(int seg = 0; seg < segCount; seg++){
+		fprintf(stdout,
+			" Segment %2d/%2u (offset:%5u):\n",
+			seg,
+			segCount,
+			format4buf_Host.idRangeOffset[seg]);
+
+		if(! (format4buf_Host.startCode[seg] <= format4buf_Host.endCode[seg])){
+			FONT_ERROR_LOG("! %u < %u", format4buf_Host.startCode[seg], format4buf_Host.endCode[seg]);
+			continue;
+		}
+
+		size_t glyphIdArrayNum = (format4buf_Host.endCode[seg] - format4buf_Host.startCode[seg]) + 1;
+
+		if(0xffff == format4buf_Host.endCode[seg]){ // last segment to missignGlyph
+			if(0xffff != format4buf_Host.startCode[seg] ||
+				1 != format4buf_Host.idDelta[seg] ||
+				0 != format4buf_Host.idRangeOffset[seg]){
+				FONT_ERROR_LOG("0x%04x 0x%04x %d %u",
+					format4buf_Host.endCode[seg],
+					format4buf_Host.startCode[seg],
+					format4buf_Host.idDelta[seg],
+					format4buf_Host.idRangeOffset[seg]);
+				continue;
+			}
+		}
+
+		if(0 != format4buf_Host.idRangeOffset[seg]){
+			fprintf(stdout,
+				"		daisyff not implement. 0 != idRangeOffset");
+			continue;
+		}
+
+		for(int i = 0; i < glyphIdArrayNum; i++){
+			uint16_t glyphId = format4buf_Host.startCode[seg] + i + format4buf_Host.idDelta[seg];
+			fprintf(stdout,
+				"		 Char 0x%04x -> Index %3d\n",
+				format4buf_Host.startCode[seg] + i,
+				glyphId);
+		}
+	}
 }
 
 void cmapTable(TableDirectory_Member *tableDirectory, size_t numTables, int fd)
@@ -583,8 +747,10 @@ void cmapTable(TableDirectory_Member *tableDirectory, size_t numTables, int fd)
 
 	size_t offsetInTable = sizeof(CmapTableHeader);
 
+	fprintf(stdout, "\n");
+
 	// *** CmapTable EncogindRecords
-	size_t cmapSubtableOffsets[cmapTableHeader_Host.numTables]; // CmapSubtableを引くのに使う
+	uint32_t cmapSubtableOffsets[cmapTableHeader_Host.numTables]; // CmapSubtableを引くのに使う
 	for(int r = 0; r < cmapTableHeader_Host.numTables; r++){
 		CmapTable_EncodingRecordElementHeader encodingRecord;
 		COPYRANGE_OR_DIE(fd, (void *)&encodingRecord, ntohl(tableDirectory_CmapTable->offset) + offsetInTable, sizeof(CmapTable_EncodingRecordElementHeader));
@@ -615,6 +781,7 @@ void cmapTable(TableDirectory_Member *tableDirectory, size_t numTables, int fd)
 		COPYRANGE_OR_DIE(fd, (void *)&format, ntohl(tableDirectory_CmapTable->offset) + cmapSubtableOffsets[t], sizeof(uint16_t));
 		format = ntohs(format);
 
+		fprintf(stdout, "\n");
 		fprintf(stdout,
 			"SubTable   %d.	 Format %d - %s (offset:0x%08x)\n",
 			t,
@@ -622,15 +789,35 @@ void cmapTable(TableDirectory_Member *tableDirectory, size_t numTables, int fd)
 			CmapSubtable_ToShowString(format),
 			(uint32_t)cmapSubtableOffsets[t]); // あまり大きいoffsetは想定していない
 
+		int alreadyIndex = -1;
+		for(int ii = 0; ii < t; ii++){
+			if(cmapSubtableOffsets[t] == cmapSubtableOffsets[ii]){
+				alreadyIndex = ii;
+			}
+		}
+		if(-1 != alreadyIndex){
+			fprintf(stdout,
+				"	skip CmapSubtable already %2d,%2d/%2d(offset:0x%08x)\n",
+				alreadyIndex, t, cmapTableHeader_Host.numTables, cmapSubtableOffsets[t]);
+			continue;
+		}
+
 		switch(format){
 			case 0:
 			{
 				cmapTable_Format0(tableDirectory_CmapTable, fd, cmapSubtableOffsets[t]);
 			}
 				break;
+			case 4:
+			{
+				cmapTable_Format4(tableDirectory_CmapTable, fd, cmapSubtableOffsets[t]);
+			}
+				break;
 			default:
 				fprintf(stdout,
-					"	not implement or invalid.\n");
+					"	CmapSubtable(%2d, 0x%08x) not implement or invalid.\n",
+					format, format
+					);
 		}
 	}
 }
