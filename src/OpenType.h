@@ -559,7 +559,7 @@ void GlyphDescriptionBuf_generateByteDataWithOutline(
 	memcpy(&(glyphDescriptionBuf->data[offset]), &glyphDescriptionHeader, wsize);
 	offset += wsize;
 	// endPoints[numberOfContours]
-	htonArray16(&(glyphDescriptionBuf->data[offset]), endPoints, glyphDescriptionBuf->numberOfContours);
+	htonArray16Move(&(glyphDescriptionBuf->data[offset]), endPoints, glyphDescriptionBuf->numberOfContours);
 	offset += sizeof(uint16_t) * glyphDescriptionBuf->numberOfContours;
 	// instructionLength
 	wsize = sizeof(uint16_t);
@@ -576,11 +576,11 @@ void GlyphDescriptionBuf_generateByteDataWithOutline(
 	offset += wsize;
 	// xCoodinates[] // SHORT_VECTORは未実装
 	wsize = (sizeof(int16_t) * pointNum);
-	htonArray16(&(glyphDescriptionBuf->data[offset]), (uint16_t *)xCoodinates, pointNum);
+	htonArray16Move(&(glyphDescriptionBuf->data[offset]), (uint16_t *)xCoodinates, pointNum);
 	offset += wsize;
 	// yCoodinates[] // SHORT_VECTORは未実装
 	wsize = (sizeof(int16_t) * pointNum);
-	htonArray16(&(glyphDescriptionBuf->data[offset]), (uint16_t *)yCoodinates, pointNum);
+	htonArray16Move(&(glyphDescriptionBuf->data[offset]), (uint16_t *)yCoodinates, pointNum);
 	offset += wsize;
 
 	// デバッグ情報を残す

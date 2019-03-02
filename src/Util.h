@@ -111,7 +111,7 @@ uint64_t htonll(uint64_t x)
 	}
 }
 
-void htonArray16(uint8_t *buf8, const uint16_t *array16, size_t array16Num)
+void htonArray16Move(uint8_t *buf8, const uint16_t *array16, size_t array16Num)
 {
 	uint16_t *buf16 = (uint16_t *)ffmalloc(sizeof(uint16_t) * array16Num);
 	for(int i = 0; i < array16Num; i++){
