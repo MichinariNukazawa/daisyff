@@ -48,7 +48,7 @@ com:
 	file daisy-min.otf
 	ttx daisy-min.otf
 
-$(APP): src/daisyff.c src/*.h
+$(APP): src/daisyff.c src/*.h include/*.h
 	gcc $< \
 		$(CFLAGS) $(INCLUDE) \
 		-o $(APP)
