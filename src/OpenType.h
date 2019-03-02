@@ -107,7 +107,8 @@ time_t timeFromStr(const char *time_details)
 	//}
 	/** mktime()でUTC時間を渡すために、TZ環境変数をUTCにセットする。戻す処理は省略。
 	https://linuxjm.osdn.jp/html/LDP_man-pages/man3/timegm.3.html */
-	putenv("TZ="); //!< `warning: implicit declaration of function ‘setenv’;`を避ける。
+	char tz[] = "TZ="; //!< warning: -Werror=discarded-qualifiersを避ける
+	putenv(tz); //!< `warning: implicit declaration of function ‘setenv’;`を避ける。
 	tzset();
 	time_t time = mktime(&tm);
 	ASSERT(-1 != time);

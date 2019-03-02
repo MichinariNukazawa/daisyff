@@ -9,7 +9,16 @@ CFLAGS		+= -fno-strict-aliasing
 CFLAGS		+= -W -Wall -Wextra
 CFLAGS		+= -Werror
 CFLAGS		+= -Wno-unused-parameter
-CFLAGS		+= -Wno-sign-compare
+CFLAGS		+= -Wunused -Wimplicit-function-declaration \
+		 -Wincompatible-pointer-types \
+		 -Wbad-function-cast -Wcast-align \
+		 -Wdisabled-optimization -Wdouble-promotion \
+		 -Wformat-y2k -Wuninitialized -Winit-self \
+		 -Wlogical-op -Wmissing-include-dirs \
+		 -Wshadow -Wswitch-default -Wundef \
+		 -Wwrite-strings -Wunused-macros
+CFLAGS		+= -Wno-sign-compare # @todo
+CFLAGS		+= -Wno-bad-function-cast # @todo
 
 SOURCES		:= $(wildcard $(SOURCE_DIR)/*.c)
 OBJECTS		:= $(subst $(SOURCE_DIR),$(OBJECT_DIR),$(SOURCES:.c=.o))

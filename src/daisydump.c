@@ -178,7 +178,7 @@ MaxpTable MaxpTable_ToHostByteOrder(MaxpTable maxpTable)
 
 typedef struct{
 	uint16_t	id;
-	char		*showString;
+	const char	*showString;
 }PlatformIdInfo;
 const PlatformIdInfo platformIdInfos[] = {
 	{0,	"Unicode",},
@@ -210,7 +210,7 @@ const char *PlatformID_ToShowString(uint16_t platformID)
 
 typedef struct{
 	uint16_t	encodingId;
-	char		*showString;
+	const char	*showString;
 }EncodingIdInWindowsPlatformInfo;
 EncodingIdInWindowsPlatformInfo encodingIdInWindowsPlatformInfos[] = {
 	{ 0,	"Symbol",},
@@ -263,7 +263,7 @@ const char *EncodingID_ToShowString(uint16_t platformId, uint16_t encodingId)
 
 typedef struct{
 	uint16_t	format;
-	char		*showString;
+	const char	*showString;
 }CmapSubtableInfo;
 const CmapSubtableInfo cmapSubtableInfos[] = {
 	{ 0, "Byte encoding table"},
@@ -973,8 +973,7 @@ void glyfTable(
 					"%d", ntohl(tableDirectory_GlyfTable->length));
 
 			uint16_t *p = (uint16_t *)&gdata[offsetInTable];
-			uint16_t v = *p;
-			uint16_t endPtsOfContour = ntohs(v);
+			uint16_t endPtsOfContour = ntohs(*p);
 			fprintf(stdout, "	 %2d: %2d\n", co, endPtsOfContour);
 
 			pointNum = endPtsOfContour + 1;
@@ -983,8 +982,8 @@ void glyfTable(
 
 		// *** GlyphDescription.LengthOfInstructions
 		uint16_t *p = (uint16_t *)&gdata[offsetInTable];
-		uint16_t v = *p;
-		uint16_t instructionLength = ntohs(v);
+		uint16_t v0 = *p;
+		uint16_t instructionLength = ntohs(v0);
 		fprintf(stdout, "\n");
 		fprintf(stdout, "	 Length of Instructions: %2d\n", instructionLength);
 
@@ -1056,18 +1055,17 @@ void glyfTable(
 				gpoints[xcor].abs.x = gpoints[xcor - 1].abs.x;
 			}else{
 				uint16_t raw;
-				int v;
+				int16_t rel;
 				if(GlyphFlag_IsXShortVector(flag)){
 					raw = *(uint8_t *)(&gdata[offsetInTable]);
-					v = raw;
+					rel = raw;
 					offsetInTable += sizeof(uint8_t);
 				}else{
 					raw = ntohs(*(uint16_t *)(&gdata[offsetInTable]));
-					v = CONVERT_INT_FROM_UINT16T(raw);
-					v *= -1; //!< @todo 正直ttfdump合わせでよくわかってない
+					rel = CONVERT_INT_FROM_UINT16T(raw);
+					rel *= -1; //!< @todo 正直ttfdump合わせでよくわかってない
 					offsetInTable += sizeof(uint16_t);
 				}
-				int rel = v;
 				if(GlyphFlag_IsXShortVector(flag) && GlyphFlag_IsSameOrPisitiveXShortVector(flag)){
 					rel *= +1;
 				}else{
@@ -1093,18 +1091,17 @@ void glyfTable(
 				gpoints[ycor].abs.y = gpoints[ycor - 1].abs.y;
 			}else{
 				uint16_t raw;
-				int16_t v;
+				int16_t rel;
 				if(GlyphFlag_IsYShortVector(flag)){
 					raw = *(uint8_t *)(&gdata[offsetInTable]);
-					v = raw;
+					rel = raw;
 					offsetInTable += sizeof(uint8_t);
 				}else{
 					raw = ntohs(*(uint16_t *)(&gdata[offsetInTable]));
-					v = CONVERT_INT_FROM_UINT16T(raw);
-					v *= -1; //!< @todo 正直ttfdump合わせでよくわかってない
+					rel = CONVERT_INT_FROM_UINT16T(raw);
+					rel *= -1; //!< @todo 正直ttfdump合わせでよくわかってない
 					offsetInTable += sizeof(uint16_t);
 				}
-				int rel = v;
 				if(GlyphFlag_IsYShortVector(flag) && GlyphFlag_IsSameOrPisitiveYShortVector(flag)){
 					rel *= +1;
 				}else{

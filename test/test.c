@@ -41,7 +41,7 @@
 			exit(1); \
 		} \
 	}while(0);
-
+/*
 #define EXPECT_NE_UINT(ARG0, ARG1) \
 	do{ \
 		uint64_t ARG0V = (ARG0); \
@@ -52,7 +52,7 @@
 			exit(1); \
 		} \
 	}while(0);
-
+*/
 #define EXPECT_TRUE(ARG0) \
 	do{ \
 		uint64_t ARG0V = (ARG0); \
