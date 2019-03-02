@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 	  'name' Table
 	  */
 	NameTableBuf nameTableBuf = NameTableBuf_init(
-			"©Copyright the project daisy bell 2019",
+			"(c)Copyright the project daisy bell 2019", //"©Copyright the project daisy bell 2019",
 			fontname,
 			(MacStyle)MacStyle_Bit6_Regular,
 			"Version 1.0",

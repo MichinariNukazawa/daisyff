@@ -285,16 +285,16 @@ typedef struct{
 const char *MacStyle_toStringForNameTable(MacStyle macStyle)
 {
 	if(macStyle == (MacStyle_Bit0_Italic | MacStyle_Bit5_Bold)){
-		return "bold italic";
+		return "Bold Italic";
 	}
 	if(macStyle == MacStyle_Bit0_Italic){
-		return "italic";
+		return "Italic";
 	}
 	if(macStyle == MacStyle_Bit5_Bold){
-		return "bold";
+		return "Bold";
 	}
 	if(macStyle == MacStyle_Bit6_Regular){
-		return "regular";
+		return "Regular";
 	}
 
 	return NULL;
@@ -330,6 +330,25 @@ typedef Uint16Type PlatformID;
 typedef Uint16Type EncodingID;
 typedef Uint16Type LanguageID;
 typedef Uint16Type NameID;
+
+bool PostScriptName_valid(const char *str)
+{
+	const char invalids[] = {'[', ']', '(', ')', '{', '}', '<', '>', '/', '%'};
+	for(int i = 0; i < strlen(str); i++){
+		if(0 == isprint(str[i])){
+			DEBUG_LOG("0x%02x[%d] is not printable.", str[i], i);
+			return false;
+		}
+		for(int t = 0; t < sizeof(invalids); t++){
+			if(invalids[t] == str[i]){
+				DEBUG_LOG("0x%02x[%d] is invalid character in PostScriptName.", str[i], i);
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
 
 uint8_t *convertNewUtf16FromUtf8(const char *stringdata)
 {
@@ -441,16 +460,23 @@ NameTableBuf NameTableBuf_init(
 	// NameTable.NameRecord[](および.stringstrage)にNameRecord_Menberを追加。
 	const char *macStyleString = MacStyle_toStringForNameTable(macStyle);
 	ASSERT(macStyleString);
-	char *fullfontname = NULL;
-	sprintf_new(fullfontname, "%s %s", fontname, macStyleString);
-	ASSERT(fullfontname);
+	char *appfullfontname = NULL;
+	sprintf_new(appfullfontname, "%s %s %s", vendorname, fontname, macStyleString);
+	ASSERT(appfullfontname);
+	char *humanfullfontname = NULL;
+	sprintf_new(humanfullfontname, "%s %s", fontname, macStyleString);
+	ASSERT(humanfullfontname);
+	char *postscriptfontname = NULL;
+	sprintf_new(postscriptfontname, "%s-%s", fontname, macStyleString);
+	ASSERT(postscriptfontname);
+	ASSERTF(PostScriptName_valid(postscriptfontname), "`%s`", postscriptfontname);
 	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  0, copyright);
 	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  1, fontname);
 	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  2, macStyleString);
-	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  3, fullfontname);
-	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  4, fullfontname);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  3, appfullfontname);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  4, humanfullfontname);
 	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  5, versionString);
-	//NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  6, fullfontname);
+	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  6, postscriptfontname);
 	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  8, vendorname);
 	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  9, designername);
 	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0, 11, vendorurl);
