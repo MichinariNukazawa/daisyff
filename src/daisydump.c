@@ -164,6 +164,128 @@ MaxpTable MaxpTable_ToHostByteOrder(MaxpTable maxpTable)
 	return maxpTable_Host;
 }
 
+typedef struct{
+	uint16_t	id;
+	char		*showString;
+}PlatformIdInfo;
+const PlatformIdInfo platformIdInfos[] = {
+	{0,	"Unicode",},
+	{1,	"Macintosh",},
+	{2,	"ISO(deprecated)",},
+	{3,	"Windows",},
+	{4,	"Custom",},
+};
+
+const PlatformIdInfo *PlatformID_InfoFromId(uint16_t platformID)
+{
+	for(int i = 0; i < sizeof(platformIdInfos)/ sizeof(platformIdInfos[0]); i++){
+		if(platformIdInfos[i].id == platformID){
+			return &platformIdInfos[i];
+		}
+	}
+
+	return NULL;
+}
+const char *PlatformID_ToShowString(uint16_t platformID)
+{
+	const PlatformIdInfo *platformInfo = PlatformID_InfoFromId(platformID);
+	if(NULL == platformInfo){
+		return "<unknown>";
+	}
+
+	return platformInfo->showString;
+}
+
+typedef struct{
+	uint16_t	encodingId;
+	char		*showString;
+}EncodingIdInWindowsPlatformInfo;
+EncodingIdInWindowsPlatformInfo encodingIdInWindowsPlatformInfos[] = {
+	{ 0,	"Symbol",},
+	{ 1,	"Unicode BMP",},
+	{ 2,	"ShiftJIS",},
+	{ 3,	"PRC",},
+	{ 4,	"Big5",},
+	{ 5,	"Wansung",},
+	{ 6,	"Johab",},
+	{ 7,	"Reserved",},
+	{ 8,	"Reserved",},
+	{ 9,	"Reserved",},
+	{10,	"Unicode full repertoire",},
+};
+
+const EncodingIdInWindowsPlatformInfo *EncodingIdInWindowsPlatform_InfoFromFormat(uint16_t encodingId)
+{
+	for(int i = 0; i < sizeof(encodingIdInWindowsPlatformInfos)/ sizeof(encodingIdInWindowsPlatformInfos[0]); i++){
+		if(encodingIdInWindowsPlatformInfos[i].encodingId == encodingId){
+			return &encodingIdInWindowsPlatformInfos[i];
+		}
+	}
+
+	return NULL;
+}
+const char *EncodingIdInWindowsPlatform_ToShowString(uint16_t encodingId)
+{
+	const EncodingIdInWindowsPlatformInfo *encodingIdInWindowsPlatformInfo = EncodingIdInWindowsPlatform_InfoFromFormat(encodingId);
+	if(NULL == encodingIdInWindowsPlatformInfo){
+		return "<unknown>";
+	}
+
+	return encodingIdInWindowsPlatformInfo->showString;
+}
+
+const char *EncodingID_ToShowString(uint16_t platformId, uint16_t encodingId)
+{
+	//DEBUG_LOG("%u %u", platformId, encodingId);
+	switch(platformId){
+		case 0: // Unicode
+			return "<daisyff not implement>"; //!< @todo
+		case 1: // Macintosh
+			return "set encodingId=0";
+		case 3: // windows
+			return EncodingIdInWindowsPlatform_ToShowString(encodingId);
+		default:
+			return "<unknown>";
+	}
+}
+
+typedef struct{
+	uint16_t	format;
+	char		*showString;
+}CmapSubtableInfo;
+const CmapSubtableInfo cmapSubtableInfos[] = {
+	{ 0, "Byte encoding table"},
+	{ 2, "High-byte mapping through table"},
+	{ 4, "Segment mapping to delta values"},
+	{ 6, "Trimmed table mapping"},
+	{ 8, "mixed 16-bit and 32-bit coverage"},
+	{10, "Trimmed array"},
+	{12, "Segmented coverage"},
+	{13, "Many-to-one range mappings"},
+	{14, "Unicode Variation Sequences"},
+};
+
+const CmapSubtableInfo *CmapSubtable_InfoFromFormat(uint16_t format)
+{
+	for(int i = 0; i < sizeof(cmapSubtableInfos)/ sizeof(cmapSubtableInfos[0]); i++){
+		if(cmapSubtableInfos[i].format == format){
+			return &cmapSubtableInfos[i];
+		}
+	}
+
+	return NULL;
+}
+const char *CmapSubtable_ToShowString(uint16_t format)
+{
+	const CmapSubtableInfo *cmapSubtableInfo = CmapSubtable_InfoFromFormat(format);
+	if(NULL == cmapSubtableInfo){
+		return "<unknown>";
+	}
+
+	return cmapSubtableInfo->showString;
+}
+
+
 enum LocaTable_Kind{
 	LocaTable_Kind_Short	= 0,
 	LocaTable_Kind_Long	= 1,
@@ -258,7 +380,6 @@ void readTableDirectory(
 		int fd)
 {
 	TableDirectory_Member *tableDirectory = NULL;
-
 	// ** TableDirectory
 	//TableDirectory_Member *tableDirectory = NULL;
 	for(int i = 0; i < numTables; i++){
@@ -399,6 +520,120 @@ void maxpTable(
 	*maxpTable_Host_numGlyphs = maxpTable_Host.numGlyphs;
 }
 
+void cmapTable_Format0(TableDirectory_Member *tableDirectory_CmapTable, int fd, size_t subtableOffset)
+{
+	size_t HEADER_SIZE = 6;
+	uint16_t header[3];
+	COPYRANGE_OR_DIE(fd, (void *)header, ntohl(tableDirectory_CmapTable->offset) + subtableOffset, sizeof(header));
+	uint16_t length = htons(header[1]);
+	uint16_t languageId = htons(header[2]);
+	fprintf(stdout,
+		"		 Length:     %3d(limited to header(6) + 256)\n"
+		"		 Language:   %3d\n",
+		length,
+		languageId);
+
+	FONT_ASSERT(6 + 256 >= length); // Format0 fullsize
+	FONT_ASSERT(6 <= length);
+
+	uint8_t glyphIdArray[256];
+	COPYRANGE_OR_DIE(fd, (void *)glyphIdArray, ntohl(tableDirectory_CmapTable->offset) + subtableOffset + HEADER_SIZE, length - HEADER_SIZE);
+	fprintf(stdout,
+		"		[%3d] = {\n"
+		"		",
+		(int)(length - HEADER_SIZE));
+	for(int g = 0; g < (length - HEADER_SIZE); g++){
+		if((0 != g) && (0 == g % 16)){
+			fprintf(stdout, "\n		");
+		}
+		fprintf(stdout, "%3d,", glyphIdArray[g]);
+	}
+	fprintf(stdout, "}\n");
+}
+
+void cmapTable(TableDirectory_Member *tableDirectory, size_t numTables, int fd)
+{
+	// ** CmapTable
+	TableDirectory_Member *tableDirectory_CmapTable = TableDirectory_QueryTag(tableDirectory, numTables, TagType_Generate("cmap"));
+	if(NULL == tableDirectory_CmapTable){
+		FONT_WARN_LOG("CmapTable not detected.");
+		return;
+	}
+
+	fprintf(stdout, "\n");
+	fprintf(stdout,
+		"'cmap' Table - Character to Glyph Index Mapping Table\n"
+		"-----------------------------------------------------\n");
+
+	CmapTableHeader cmapTableHeader;
+	COPYRANGE_OR_DIE(fd, (void *)&cmapTableHeader, ntohl(tableDirectory_CmapTable->offset), sizeof(CmapTableHeader));
+
+	// *** CmapTableHeader
+	CmapTableHeader cmapTableHeader_Host = {
+		.version	= ntohs(cmapTableHeader.version		),
+		.numTables	= ntohs(cmapTableHeader.numTables	),
+	};
+	fprintf(stdout,
+		"	 'cmap' version: %d\n"
+		//"	 number of encodings: 1\n"
+		"	 number of subtables: %2d\n"
+		,
+		cmapTableHeader_Host.version,
+		cmapTableHeader_Host.numTables);
+
+	size_t offsetInTable = sizeof(CmapTableHeader);
+
+	// *** CmapTable EncogindRecords
+	size_t cmapSubtableOffsets[cmapTableHeader_Host.numTables]; // CmapSubtableを引くのに使う
+	for(int r = 0; r < cmapTableHeader_Host.numTables; r++){
+		CmapTable_EncodingRecordElementHeader encodingRecord;
+		COPYRANGE_OR_DIE(fd, (void *)&encodingRecord, ntohl(tableDirectory_CmapTable->offset) + offsetInTable, sizeof(CmapTable_EncodingRecordElementHeader));
+		CmapTable_EncodingRecordElementHeader encodingRecord_Host = {
+			.platformID	= ntohs(encodingRecord.platformID	),
+			.encodingID	= ntohs(encodingRecord.encodingID	),
+			.offset		= ntohl(encodingRecord.offset		),
+		};
+		fprintf(stdout,
+			"Encoding   %d.	 PlatformID:  %d(%s)\n"
+			"		 EcodingID:   %d(%s)\n"
+			"		 SubTable: %d, Offset: 0x%08x(%4d)\n",
+			r,
+			encodingRecord_Host.platformID,
+			PlatformID_ToShowString(encodingRecord_Host.platformID),
+			encodingRecord_Host.encodingID,
+			EncodingID_ToShowString(encodingRecord_Host.platformID, encodingRecord_Host.encodingID),
+			r,
+			encodingRecord_Host.offset,
+			encodingRecord_Host.offset);
+		offsetInTable += sizeof(CmapTable_EncodingRecordElementHeader);
+		cmapSubtableOffsets[r] = encodingRecord_Host.offset;
+	}
+
+	// *** CmapTable Subtable
+	for(int t = 0; t < cmapTableHeader_Host.numTables; t++){
+		uint16_t format;
+		COPYRANGE_OR_DIE(fd, (void *)&format, ntohl(tableDirectory_CmapTable->offset) + cmapSubtableOffsets[t], sizeof(uint16_t));
+		format = ntohs(format);
+
+		fprintf(stdout,
+			"SubTable   %d.	 Format %d - %s (offset:0x%08x)\n",
+			t,
+			format,
+			CmapSubtable_ToShowString(format),
+			(uint32_t)cmapSubtableOffsets[t]); // あまり大きいoffsetは想定していない
+
+		switch(format){
+			case 0:
+			{
+				cmapTable_Format0(tableDirectory_CmapTable, fd, cmapSubtableOffsets[t]);
+			}
+				break;
+			default:
+				fprintf(stdout,
+					"	not implement or invalid.\n");
+		}
+	}
+}
 
 void locaTable(
 		TableDirectory_Member *tableDirectory,
@@ -719,8 +954,14 @@ void glyfTable(
 	}
 }
 
+typedef struct{
+	char tablename[5];
+}FfDumpArg;
+
 int main(int argc, char **argv)
 {
+	FfDumpArg arg = {0};
+
 	/**
 	第1引数でフォントファイル名を指定する
 	*/
@@ -728,6 +969,14 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 	const char *fontfilepath = argv[1];
+
+	// ** 引数：Table指定
+	if(argc >= 4 && (0 == strcmp("-t", argv[2]))){
+		if(4 != strlen(argv[3])){
+			ERROR_LOG("invalid table name");
+		}
+		strcpy(arg.tablename, argv[3]);
+	}
 
 	int fd = open(fontfilepath, O_RDONLY, 0777);
 	if(-1 == fd){
@@ -766,9 +1015,21 @@ int main(int argc, char **argv)
 
 	size_t numTables = offsetTable.numTables; // use TableDirectory
 
+	// ** TableDirectory
 	TableDirectory_Member *tableDirectory = NULL;
 	readTableDirectory(&tableDirectory, numTables, fd);
 
+	// ** table指定jump
+	if(0 == strlen(arg.tablename)){
+		// NOP // table not selected
+	}else if(0 == strcmp("cmap", arg.tablename)){
+		goto CmapTable;
+	}else{
+		ERROR_LOG("invalid table name");
+		exit(1);
+	}
+
+	// ** Tables
 	uint16_t headTable_Host_indexToLocFormat = 0; // use LocaTable from HeadTable member
 
 	headTable(tableDirectory, numTables, fd, &headTable_Host_indexToLocFormat);
@@ -776,6 +1037,12 @@ int main(int argc, char **argv)
 	size_t maxpTable_Host_numGlyphs = 0; // use LocaTable from MaxpTable member
 
 	maxpTable(tableDirectory, numTables, fd, &maxpTable_Host_numGlyphs);
+
+CmapTable:
+	cmapTable(tableDirectory, numTables, fd);
+	if(0 == strcmp("cmap", arg.tablename)){
+		goto finally;
+	}
 
 	uint32_t *locaList = NULL; // use GlyfTable from LocaTable
 
@@ -785,6 +1052,8 @@ int main(int argc, char **argv)
 
 	glyfTable(tableDirectory, numTables, fd,
 			maxpTable_Host_numGlyphs, locaList);
+
+finally:
 
 	close(fd);
 
