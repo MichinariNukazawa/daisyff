@@ -630,11 +630,12 @@ typedef struct{
 	// 'cmap' subtables
 }CmapTable_EncodingRecordElementHeader;
 
+#define CmapSubtableFormat0_ARRAY_SIZE (256)
 typedef struct{
 	Uint16Type		format;
 	Uint16Type		length;
 	Uint16Type		language;
-	Uint8Type		glyphIdArray[256];
+	Uint8Type		glyphIdArray[CmapSubtableFormat0_ARRAY_SIZE];
 }CmapTable_CmapSubtable_Format0;
 
 typedef struct{
@@ -674,13 +675,11 @@ void CmapTable_EncodingRecordElementHeader_init(
 
 void CmapTable_CmapSubtable_Format0_finally(CmapTable_CmapSubtable_Format0 *format0, size_t numGlyph)
 {
-	ASSERT(numGlyph <= 256);
-
 	size_t FORMAT0_HEADER_SIZE = sizeof(Uint16Type) * 3; // format, length, language
 
 	format0->format		= htons(0);
 	//format0->length		= htons(FORMAT0_HEADER_SIZE + numGlyph);
-	format0->length		= htons(FORMAT0_HEADER_SIZE + 256);
+	format0->length		= htons(FORMAT0_HEADER_SIZE + CmapSubtableFormat0_ARRAY_SIZE);
 	format0->language	= htons(0);
 	//format0.glyphIdArray	= {0},
 }
@@ -688,7 +687,7 @@ void CmapTable_CmapSubtable_Format0_finally(CmapTable_CmapSubtable_Format0 *form
 typedef struct{
 	GlyphDescriptionBuf	*glyphDescriptionBufs;
 	size_t			numGlyphs;
-	uint8_t			*cmapSubtableFormat0Buf;
+	uint8_t			*cmapSubtableBuf_GlyphIdArray8; //!< `glyphId = array[codepoint=0-255]`
 	uint8_t			*cmapData;
 	size_t			cmapDataSize;
 	uint8_t			*locaData;
@@ -737,11 +736,11 @@ void GlyphTablesBuf_appendSimpleGlyph(
 	glyphTablesBuf->locaDataSize = newsize;
 
 	// ** 'cmap' Table
-	ASSERT(glyphTablesBuf->cmapSubtableFormat0Buf);
+	ASSERT(glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8);
 	ASSERT(0 <= c);
-	//ASSERT(c < 256);
+	//ASSERT(c < CmapSubtableFormat0_ARRAY_SIZE);
 	int ix = c;
-	glyphTablesBuf->cmapSubtableFormat0Buf[ix] = glyphTablesBuf->numGlyphs;
+	glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8[ix] = glyphTablesBuf->numGlyphs;
 
 	// ** numGlyphs ('maxp' Table)
 	(glyphTablesBuf->numGlyphs)++;
@@ -770,7 +769,7 @@ void GlyphTablesBuf_finally(GlyphTablesBuf *glyphTablesBuf)
 			sizeof(CmapTable_EncodingRecordElementHeader));
 
 	CmapTable_CmapSubtable_Format0 format0 = {0};
-	memcpy(format0.glyphIdArray, glyphTablesBuf->cmapSubtableFormat0Buf, 256);
+	memcpy(format0.glyphIdArray, glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8, CmapSubtableFormat0_ARRAY_SIZE);
 	CmapTable_CmapSubtable_Format0_finally(&format0, glyphTablesBuf->numGlyphs);
 	memcpy(&glyphTablesBuf->cmapData[subtableOffset],
 			&format0,
@@ -782,7 +781,7 @@ void GlyphTablesBuf_init(GlyphTablesBuf *glyphTablesBuf)
 	*glyphTablesBuf = (GlyphTablesBuf){
 		.glyphDescriptionBufs	= NULL,
 		.numGlyphs		= 0,
-		.cmapSubtableFormat0Buf	= NULL,
+		//.cmapSubtableBuf_GlyphIdArray8	= NULL,
 		.cmapData		= NULL,
 		.cmapDataSize		= 0,
 		.locaData		= NULL,
@@ -792,7 +791,7 @@ void GlyphTablesBuf_init(GlyphTablesBuf *glyphTablesBuf)
 	};
 
 	// ** 'cmap' Table バッファ確保
-	glyphTablesBuf->cmapSubtableFormat0Buf = (uint8_t *)ffmalloc(sizeof(uint8_t) * 256);
+	glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8 = (uint8_t *)ffmalloc(sizeof(uint8_t) * CmapSubtableFormat0_ARRAY_SIZE);
 
 	// ** .notdefなどデフォルトの文字を追加
 	// .notdef
@@ -806,11 +805,11 @@ void GlyphTablesBuf_init(GlyphTablesBuf *glyphTablesBuf)
 	GlyphDescriptionBuf_generateByteDataWithOutline(&glyphDescriptionBuf_empty, &outline_empty);
 	// NUL and other
 	GlyphTablesBuf_appendSimpleGlyph(glyphTablesBuf, 0, &glyphDescriptionBuf_empty);
-	glyphTablesBuf->cmapSubtableFormat0Buf[ 8] = 1; // BackSpace = index 1
-	glyphTablesBuf->cmapSubtableFormat0Buf[29] = 1; // GroupSeparator = index 1
+	glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8[ 8] = 1; // BackSpace = index 1
+	glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8[29] = 1; // GroupSeparator = index 1
 	// TAB(HT) and other
 	GlyphTablesBuf_appendSimpleGlyph(glyphTablesBuf, '\t', &glyphDescriptionBuf_empty);
-	glyphTablesBuf->cmapSubtableFormat0Buf[13] = 1; // CR = index 2
+	glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8[13] = 1; // CR = index 2
 }
 
 
