@@ -1,5 +1,5 @@
 
-APP		:=./daisyff.exe
+APP		:= ./daisyff.exe
 SOURCE_DIR	:= ./src
 OBJECT_DIR	:= ./object
 
@@ -26,12 +26,18 @@ all: run test dump
 gdb: $(APP)
 	gdb --args $(APP) daisy-min
 
-test: test/test.c src/*.c  src/*.h include/*.h
+test: ./test.exe
+	make clean
+	./test.exe
+	make
+	make dump
+	./daisydump.exe daisy-min.otf -t cmap
+
+./test.exe: test/test.c src/*.h include/*.h
 	gcc $< \
 		$(CFLAGS) \
 		$(INCLUDE) \
 		-o ./test.exe
-	./test.exe
 
 dump: src/daisydump.c src/*.h include/*.h
 	mkdir -p $(OBJECT_DIR)
