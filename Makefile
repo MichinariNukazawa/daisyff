@@ -28,19 +28,19 @@ DEPENDS		:= $(OBJECTS:.o=.d)
 .PHONY: dump com
 
 run: $(APP)
-	$(APP) daisy-min
+	$(APP) DaisyMini
 
 all: run test dump
 
 gdb: $(APP)
-	gdb --args $(APP) daisy-min
+	gdb --args $(APP) DaisyMini
 
 test: ./test.exe
 	make clean
 	./test.exe
 	make
 	make dump
-	./daisydump.exe daisy-min.otf -t cmap
+	./daisydump.exe DaisyMini.otf -t cmap
 
 ./test.exe: test/test.c src/*.h include/*.h
 	gcc $< \
@@ -57,11 +57,11 @@ dump: src/daisydump.c src/*.h include/*.h
 		$(CFLAGS) \
 		$(INCLUDE) \
 		-o ./daisydump.exe
-	./daisydump.exe daisy-min.otf
+	./daisydump.exe DaisyMini.otf
 
 com:
-	file daisy-min.otf
-	ttx daisy-min.otf
+	file DaisyMini.otf
+	ttx DaisyMini.otf
 
 $(APP): src/daisyff.c src/*.h include/*.h
 	gcc $< \
