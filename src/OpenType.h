@@ -130,7 +130,7 @@ LONGDATETIMEType LONGDATETIMEType_generate(time_t time)
 }
 
 /** ********
- * 内部型(SPECで定義されていないが取り回し等であると便利な型)
+ * font format 内部型(SPECで定義されていないが取り回し等であると便利な型)
  *  ******** **/
 
 
@@ -624,7 +624,16 @@ typedef struct{
 	// 'cmap' subtables
 }CmapTable_EncodingRecordElementHeader;
 
-#define CmapSubtableFormat0_ARRAY_SIZE (256)
+#define CmapSubtableFormat0_ARRAY_SIZE (256)	// 1byte ascii
+#define CmapSubtableFormat4_ARRAY_SIZE (65536)	// 2byte unicode
+#define CmapSubtableFormat0_CODEPOINT_MAX (255)
+#define CmapSubtableFormat4_CODEPOINT_MAX (65534)
+/** @notice
+  0xffff == 65535はCmapTable.subtable.format4.endCodeにmissingGlyphとして予約されている。
+  明示的に使用禁止されていないが、MSSPECを見る限り使えないと考えられるし、
+  使える場合も正しい処理を考えるのが大変そうなので、daisyffでは使用しないものとする
+  */
+
 typedef struct{
 	Uint16Type		format;
 	Uint16Type		length;
@@ -648,21 +657,32 @@ typedef struct{
 	Uint16Type	*glyphIdArray;			// glyphIdArray[ ]
 }CmapTable_CmapSubtable_Format4Buf;
 
-void CmapTableHeader_init(CmapTableHeader *cmapTableHeader)
+typedef struct{
+	Uint16Type	startCode;
+	Uint16Type	endCode;
+	Int16Type	idDelta;
+	Uint16Type	idRangeOffset;
+}CmapSubtable_Format4_SegmentBuf;
+
+void CmapTableHeader_init(CmapTableHeader *cmapTableHeader, size_t numTables)
 {
+	ASSERT(0 < numTables && numTables <= UINT16_MAX);
+	uint16_t numTables_ = numTables;
+
 	*cmapTableHeader = (CmapTableHeader){
 		.version	= htons(0),
-		.numTables	= htons(1),
+		.numTables	= htons(numTables_),
 	};
 };
 
-void CmapTable_EncodingRecordElementHeader_init(
-		CmapTable_EncodingRecordElementHeader *encodingRecordElementHeader,
+CmapTable_EncodingRecordElementHeader CmapTable_EncodingRecordElementHeader_generate(
+		uint16_t platformId,
+		uint16_t encodingId,
 		size_t offset)
 {
-	*encodingRecordElementHeader = (CmapTable_EncodingRecordElementHeader){
-		.platformID	= htons(0),
-		.encodingID	= htons(0),
+	return (CmapTable_EncodingRecordElementHeader){
+		.platformID	= htons(platformId),
+		.encodingID	= htons(encodingId),
 		.offset		= htonl(offset),
 	};
 }
@@ -678,10 +698,105 @@ void CmapTable_CmapSubtable_Format0_finally(CmapTable_CmapSubtable_Format0 *form
 	//format0.glyphIdArray	= {0},
 }
 
+FFByteArray CmapTable_CmapSubtable_Format4_generateByteDataWithGlyphIdArray16(
+		uint16_t languageId,
+		uint16_t *glyphIdArray)
+{
+	ASSERT(glyphIdArray);
+
+	// ** segmentsを収集
+	CmapSubtable_Format4_SegmentBuf segmentBufs[CmapSubtableFormat4_ARRAY_SIZE];
+	size_t segCount = 0;
+	for(int c = 0; c <= CmapSubtableFormat4_CODEPOINT_MAX; c++){
+		// 末尾セグメント用に予約されているはず
+		// CmapSubtableFormat4_CODEPOINT_MAX 定義付近にコメント書いた
+		ASSERTF(0xffff != c, "%d", c);
+
+		if(0 == glyphIdArray[c]){ //!< glyphなし
+			continue;
+		}
+		if(0 == c){ // .notdef
+			continue;
+		}
+		// daisyffにおいて空グリフ,水平タブ(0x09) (fontforge生成ファイルでは収録されなかったので略)
+		if(1 == glyphIdArray[c] || 2 == glyphIdArray[c]){
+			continue;
+		}
+
+		//!< @todo 今回はsegment形式マッピングで圧縮するほど文字数もないため、
+		// 処理を略し文字毎にsegmentを切ってしまう
+		Int16Type idDelta = glyphIdArray[c] - c;
+		segmentBufs[segCount] = (CmapSubtable_Format4_SegmentBuf){
+			.startCode	= c,
+			.endCode	= c,
+			.idDelta	= idDelta, // とりあえず今回は計算が合うと思うが...
+			.idRangeOffset	= 0,
+		};
+		DEBUG_LOG("seg:%zu start:0x%04x glyphId:%u code:0x%04x(%u) delta:%d",
+				segCount, segmentBufs[segCount].startCode, glyphIdArray[c], c, c, idDelta);
+		segCount++;
+
+		ASSERT(segCount <= (UINT16_MAX / 2) - 1); // CmapTable.subtable.format4.segCountX2の最大数から末尾segment分を引く
+	}
+	// 末尾segmentsを生成
+	{
+		segmentBufs[segCount] = (CmapSubtable_Format4_SegmentBuf){
+			.startCode	= 0xffff,
+			.endCode	= 0xffff,
+			.idDelta	= 0,
+			.idRangeOffset	= 0,
+		};
+		segCount++;
+	}
+	ASSERT(segCount <= (UINT16_MAX / 2));
+
+	// ** byte array生成
+	FFByteArray array = {0};
+	size_t segArrayElementSize = sizeof(Uint16Type) * segCount;
+	size_t reserveSize = sizeof(Uint16Type);
+	size_t fixedheadSize	= (sizeof(Uint16Type) * 7);
+	size_t segmentsSize	= reserveSize + (segArrayElementSize * 4);
+	size_t glyphIdArraySize	= 0;
+	Uint16Type length = fixedheadSize + segmentsSize + glyphIdArraySize;
+	DEBUG_LOG("segCount:%zu length:%u(0x%08x)", segCount, length, (uint32_t)length);
+
+	// *** fixed length 部分
+	FFByteArray_realloc(&array, length);
+	uint16_t segCountX2	= segCount * 2;
+	uint16_t searchRange	= (2 * 2 * (int)floor(log2(segCount)));
+	uint16_t entrySelector	= ((int)log2(searchRange/2.0));
+	uint16_t rangeShift	= 2 * segCount - searchRange;
+	uint16_t *data16 = (uint16_t *)array.data;
+	data16[0] = htons(4);			//Uint16Type	format
+	data16[1] = htons(length);			//Uint16Type	length
+	data16[2] = htons(languageId);		//Uint16Type	language
+	data16[3] = htons(segCountX2	);	//Uint16Type	segCountX2
+	data16[4] = htons(searchRange	);	//Uint16Type	searchRange
+	data16[5] = htons(entrySelector	);	//Uint16Type	entrySelector
+	data16[6] = htons(rangeShift	);	//Uint16Type	rangeShift
+
+	// *** segments
+	Uint16Type	*endCode	= (Uint16Type*)&(array.data[fixedheadSize + 0]);
+	Uint16Type	*startCode	= (Uint16Type*)&(array.data[fixedheadSize + reserveSize + (segArrayElementSize * 1)]);
+	Int16Type	*idDelta	= (Int16Type*) &(array.data[fixedheadSize + reserveSize + (segArrayElementSize * 2)]);
+	Uint16Type	*idRangeOffset	= (Uint16Type*)&(array.data[fixedheadSize + reserveSize + (segArrayElementSize * 3)]);
+	for(int seg = 0; seg < segCount; seg++){
+		endCode[seg]		= htons(segmentBufs[seg].startCode		);
+		startCode[seg]		= htons(segmentBufs[seg].endCode		);
+		idDelta[seg]		= htons(segmentBufs[seg].idDelta		);
+		idRangeOffset[seg]	= htons(segmentBufs[seg].idRangeOffset	);
+	}
+
+	//Uint16Type	*glyphIdArray;			// glyphIdArray[ ]
+
+	return array;
+}
+
 typedef struct{
 	GlyphDescriptionBuf	*glyphDescriptionBufs;
 	size_t			numGlyphs;
-	uint8_t			*cmapSubtableBuf_GlyphIdArray8; //!< `glyphId = array[codepoint=0-255]`
+	uint8_t			*cmapSubtableBuf_GlyphIdArray8;		//!< `glyphId = array[codepoint=0-255]`
+	uint16_t		*cmapSubtableBuf_GlyphIdArray16;	//!< `glyphId = array[codepoint=0-65535]`
 	FFByteArray		cmapByteArray;
 	uint8_t			*locaData;
 	size_t			locaDataSize;
@@ -696,15 +811,9 @@ enum SimpleGlyphFlags_Bit{
 
 void GlyphTablesBuf_appendSimpleGlyph(
 		GlyphTablesBuf *glyphTablesBuf,
-		char c,
+		uint16_t codepoint,
 		const GlyphDescriptionBuf *glyphDescriptionBuf)
 {
-	if(0 != isprint(c)){
-		DEBUG_LOG("%3zu: 0x%02x`%c`", glyphTablesBuf->numGlyphs, c, c);
-	}else{
-		DEBUG_LOG("%3zu: 0x%02x`xx`", glyphTablesBuf->numGlyphs, c);
-	}
-
 	//DUMPUint16((uint16_t *)glyphDescriptionBuf->data, glyphDescriptionBuf->dataSize);
 
 	// ** 'glyf' Table
@@ -730,10 +839,19 @@ void GlyphTablesBuf_appendSimpleGlyph(
 
 	// ** 'cmap' Table
 	ASSERT(glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8);
-	ASSERT(0 <= c);
-	//ASSERT(c < CmapSubtableFormat0_ARRAY_SIZE);
-	int ix = c;
-	glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8[ix] = glyphTablesBuf->numGlyphs;
+	ASSERT(glyphTablesBuf->cmapSubtableBuf_GlyphIdArray16);
+	if(codepoint <= CmapSubtableFormat0_CODEPOINT_MAX){
+		if(0 != isprint((uint8_t)codepoint)){
+			DEBUG_LOG("%3zu: 0x%02x`%c`", glyphTablesBuf->numGlyphs, codepoint, codepoint);
+		}else{
+			DEBUG_LOG("%3zu: 0x%02x`xx`", glyphTablesBuf->numGlyphs, codepoint);
+		}
+
+		glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8[codepoint] = glyphTablesBuf->numGlyphs;
+	}
+	if(codepoint <= CmapSubtableFormat4_CODEPOINT_MAX){
+		glyphTablesBuf->cmapSubtableBuf_GlyphIdArray16[codepoint] = glyphTablesBuf->numGlyphs;
+	}
 
 	// ** numGlyphs ('maxp' Table)
 	(glyphTablesBuf->numGlyphs)++;
@@ -741,29 +859,53 @@ void GlyphTablesBuf_appendSimpleGlyph(
 
 void GlyphTablesBuf_finally(GlyphTablesBuf *glyphTablesBuf)
 {
-	// ** 'cmap' Table
-	size_t length = sizeof(CmapTableHeader)
-		+ sizeof(CmapTable_EncodingRecordElementHeader)
-		+ sizeof(CmapTable_CmapSubtable_Format0);
-	FFByteArray_realloc(&glyphTablesBuf->cmapByteArray, length);
+	//! @note 2019/03/03現在CmapTable内部のSubtable順序等はFontForgeに生成させたフォントファイルを参考に合わせている
 
+	// ** CmapTable.Header
+	size_t numTables = 3;
 	CmapTableHeader cmapTableHeader;
-	CmapTableHeader_init(&cmapTableHeader);
-	memcpy(&glyphTablesBuf->cmapByteArray.data[0], &cmapTableHeader, sizeof(CmapTableHeader));
+	CmapTableHeader_init(&cmapTableHeader, numTables);
+	FFByteArray_append(&glyphTablesBuf->cmapByteArray,
+			&cmapTableHeader, sizeof(CmapTableHeader));
 
-	size_t recordOffset = sizeof(CmapTableHeader);
-	size_t subtableOffset = sizeof(CmapTableHeader) + sizeof(CmapTable_EncodingRecordElementHeader);
-
-	CmapTable_EncodingRecordElementHeader encodingRecordElementHeader;
-	CmapTable_EncodingRecordElementHeader_init(&encodingRecordElementHeader, subtableOffset);
-	memcpy(&glyphTablesBuf->cmapByteArray.data[recordOffset],
-			&encodingRecordElementHeader,
-			sizeof(CmapTable_EncodingRecordElementHeader));
-
+	// ** // EncodingRecordElementHeader.offsetために事前に生成して長さを知る必要がある
 	CmapTable_CmapSubtable_Format0 format0 = {0};
-	memcpy(format0.glyphIdArray, glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8, CmapSubtableFormat0_ARRAY_SIZE);
+	memcpy(format0.glyphIdArray,
+			glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8, CmapSubtableFormat0_ARRAY_SIZE);
 	CmapTable_CmapSubtable_Format0_finally(&format0, glyphTablesBuf->numGlyphs);
-	memcpy(&glyphTablesBuf->cmapByteArray.data[subtableOffset],
+	FFByteArray arrayFormat4 = CmapTable_CmapSubtable_Format4_generateByteDataWithGlyphIdArray16(
+			0,
+			glyphTablesBuf->cmapSubtableBuf_GlyphIdArray16);
+
+	// ** CmapTable.encodingRecordElementHeader
+	size_t subtableOffset0
+		= sizeof(CmapTableHeader) + (sizeof(CmapTable_EncodingRecordElementHeader) * 3);
+	size_t subtableOffset1
+		= sizeof(CmapTableHeader) + (sizeof(CmapTable_EncodingRecordElementHeader) * 3)
+		+ arrayFormat4.length;
+	CmapTable_EncodingRecordElementHeader encodingRecordElementHeader;
+	DEBUG_LOG("subtableOffset: %zu(0x%08x) %zu(0x%08x)",
+			subtableOffset0, (uint32_t)subtableOffset0, subtableOffset1, (uint32_t)subtableOffset1);
+
+	// *** CmapTable.encodingRecordElementHeader[Format4 Unicode, ]
+	encodingRecordElementHeader = CmapTable_EncodingRecordElementHeader_generate(0, 3, subtableOffset0);
+	FFByteArray_append(&glyphTablesBuf->cmapByteArray,
+			&encodingRecordElementHeader, sizeof(CmapTable_EncodingRecordElementHeader));
+	// *** CmapTable.encodingRecordElementHeader[Format0 Macintosh, set 0]
+	encodingRecordElementHeader = CmapTable_EncodingRecordElementHeader_generate(1, 0, subtableOffset1);
+	FFByteArray_append(&glyphTablesBuf->cmapByteArray,
+			&encodingRecordElementHeader, sizeof(CmapTable_EncodingRecordElementHeader));
+	// *** CmapTable.encodingRecordElementHeader[Format4 Windows, Unicode BMP]
+	encodingRecordElementHeader = CmapTable_EncodingRecordElementHeader_generate(3, 1, subtableOffset0);
+	FFByteArray_append(&glyphTablesBuf->cmapByteArray,
+			&encodingRecordElementHeader, sizeof(CmapTable_EncodingRecordElementHeader));
+
+	// ** CmapTable.subtable[Format4]
+	FFByteArray_appendArray(&glyphTablesBuf->cmapByteArray, arrayFormat4);
+	DEBUG_LOG("format4: %zu(0x%08x)", arrayFormat4.length, (uint32_t)arrayFormat4.length);
+	DUMP0(arrayFormat4.data, arrayFormat4.length);
+	// ** CmapTable.subtable[Format0]
+	FFByteArray_append(&glyphTablesBuf->cmapByteArray,
 			&format0,
 			sizeof(CmapTable_CmapSubtable_Format0));
 }
@@ -773,7 +915,6 @@ void GlyphTablesBuf_init(GlyphTablesBuf *glyphTablesBuf)
 	*glyphTablesBuf = (GlyphTablesBuf){
 		.glyphDescriptionBufs	= NULL,
 		.numGlyphs		= 0,
-		//.cmapSubtableBuf_GlyphIdArray8	= NULL,
 		.locaData		= NULL,
 		.locaDataSize		= 0,
 		.glyfData		= NULL,
@@ -781,9 +922,14 @@ void GlyphTablesBuf_init(GlyphTablesBuf *glyphTablesBuf)
 	};
 
 	// ** 'cmap' Table バッファ確保
-	glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8 = (uint8_t *)ffmalloc(sizeof(uint8_t) * CmapSubtableFormat0_ARRAY_SIZE);
+	glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8
+		= (uint8_t *)ffmalloc(sizeof(uint8_t) * CmapSubtableFormat0_ARRAY_SIZE);
+	glyphTablesBuf->cmapSubtableBuf_GlyphIdArray16
+		= (uint16_t *)ffmalloc(sizeof(uint16_t) * CmapSubtableFormat4_ARRAY_SIZE);
 
 	// ** .notdefなどデフォルトの文字を追加
+	//    & CmapTableテーブルにGlyphIdの初期値をセット
+	//! @note Format0のBackspaceなどへのGlyphIdの割り当てはFontForgeの出力ファイルに倣った
 	// .notdef
 	GlyphDescriptionBuf glyphDescriptionBuf_notdef = {0};
 	GlyphOutline outline_notdef = GlyphOutline_Notdef();

@@ -173,6 +173,22 @@ void FFByteArray_realloc(FFByteArray *array, size_t length)
 	array->length = length;
 }
 
+void FFByteArray_append_inline_(FFByteArray *array, const uint8_t *data, size_t dataLength)
+{
+	size_t oldLength = array->length;
+	FFByteArray_realloc(array, array->length + dataLength);
+	memcpy(&array->data[oldLength], data, dataLength);
+}
+#define FFByteArray_append(ARG_array, ARG_data, ARG_dataLength) \
+	do{ \
+		FFByteArray_append_inline_(ARG_array, (void *)ARG_data, ARG_dataLength); \
+	}while(0);
+
+void FFByteArray_appendArray(FFByteArray *array, FFByteArray array1)
+{
+	FFByteArray_append(array, array1.data, array1.length);
+}
+
 // ********
 // data endian
 // ********
