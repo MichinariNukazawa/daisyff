@@ -844,7 +844,7 @@ void GlyphTablesBuf_appendSimpleGlyph(
 		if(0 != isprint((uint8_t)codepoint)){
 			DEBUG_LOG("%3zu: 0x%02x`%c`", glyphTablesBuf->numGlyphs, codepoint, codepoint);
 		}else{
-			DEBUG_LOG("%3zu: 0x%02x`xx`", glyphTablesBuf->numGlyphs, codepoint);
+			DEBUG_LOG("%3zu: 0x%02x`<not printable>`", glyphTablesBuf->numGlyphs, codepoint);
 		}
 
 		glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8[codepoint] = glyphTablesBuf->numGlyphs;
