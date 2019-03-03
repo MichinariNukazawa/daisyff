@@ -752,8 +752,7 @@ void GlyphTablesBuf_finally(GlyphTablesBuf *glyphTablesBuf)
 	glyphTablesBuf->cmapDataSize = sizeof(CmapTableHeader)
 		+ sizeof(CmapTable_EncodingRecordElementHeader)
 		+ sizeof(CmapTable_CmapSubtable_Format0);
-	glyphTablesBuf->cmapData = malloc(glyphTablesBuf->cmapDataSize);
-	memset(glyphTablesBuf->cmapData, 0, glyphTablesBuf->cmapDataSize);
+	glyphTablesBuf->cmapData = ffmalloc(glyphTablesBuf->cmapDataSize);
 
 	CmapTableHeader cmapTableHeader;
 	CmapTableHeader_init(&cmapTableHeader);
