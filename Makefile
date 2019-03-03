@@ -69,6 +69,7 @@ $(APP): src/daisyff.c src/*.h include/*.h
 		-o $(APP)
 
 clean:
+	rm -rf $(OBJECT_DIR)
 	rm -rf $(APP) *.otf
 	rm -rf *.d
 
