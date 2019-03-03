@@ -688,8 +688,7 @@ typedef struct{
 	GlyphDescriptionBuf	*glyphDescriptionBufs;
 	size_t			numGlyphs;
 	uint8_t			*cmapSubtableBuf_GlyphIdArray8; //!< `glyphId = array[codepoint=0-255]`
-	uint8_t			*cmapData;
-	size_t			cmapDataSize;
+	FFByteArray		cmapByteArray;
 	uint8_t			*locaData;
 	size_t			locaDataSize;
 	uint8_t			*glyfData;
@@ -749,28 +748,28 @@ void GlyphTablesBuf_appendSimpleGlyph(
 void GlyphTablesBuf_finally(GlyphTablesBuf *glyphTablesBuf)
 {
 	// ** 'cmap' Table
-	glyphTablesBuf->cmapDataSize = sizeof(CmapTableHeader)
+	size_t length = sizeof(CmapTableHeader)
 		+ sizeof(CmapTable_EncodingRecordElementHeader)
 		+ sizeof(CmapTable_CmapSubtable_Format0);
-	glyphTablesBuf->cmapData = ffmalloc(glyphTablesBuf->cmapDataSize);
+	FFByteArray_realloc(&glyphTablesBuf->cmapByteArray, length);
 
 	CmapTableHeader cmapTableHeader;
 	CmapTableHeader_init(&cmapTableHeader);
-	memcpy(&glyphTablesBuf->cmapData[0], &cmapTableHeader, sizeof(CmapTableHeader));
+	memcpy(&glyphTablesBuf->cmapByteArray.data[0], &cmapTableHeader, sizeof(CmapTableHeader));
 
 	size_t recordOffset = sizeof(CmapTableHeader);
 	size_t subtableOffset = sizeof(CmapTableHeader) + sizeof(CmapTable_EncodingRecordElementHeader);
 
 	CmapTable_EncodingRecordElementHeader encodingRecordElementHeader;
 	CmapTable_EncodingRecordElementHeader_init(&encodingRecordElementHeader, subtableOffset);
-	memcpy(&glyphTablesBuf->cmapData[recordOffset],
+	memcpy(&glyphTablesBuf->cmapByteArray.data[recordOffset],
 			&encodingRecordElementHeader,
 			sizeof(CmapTable_EncodingRecordElementHeader));
 
 	CmapTable_CmapSubtable_Format0 format0 = {0};
 	memcpy(format0.glyphIdArray, glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8, CmapSubtableFormat0_ARRAY_SIZE);
 	CmapTable_CmapSubtable_Format0_finally(&format0, glyphTablesBuf->numGlyphs);
-	memcpy(&glyphTablesBuf->cmapData[subtableOffset],
+	memcpy(&glyphTablesBuf->cmapByteArray.data[subtableOffset],
 			&format0,
 			sizeof(CmapTable_CmapSubtable_Format0));
 }
@@ -781,8 +780,6 @@ void GlyphTablesBuf_init(GlyphTablesBuf *glyphTablesBuf)
 		.glyphDescriptionBufs	= NULL,
 		.numGlyphs		= 0,
 		//.cmapSubtableBuf_GlyphIdArray8	= NULL,
-		.cmapData		= NULL,
-		.cmapDataSize		= 0,
 		.locaData		= NULL,
 		.locaDataSize		= 0,
 		.glyfData		= NULL,

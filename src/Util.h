@@ -148,6 +148,22 @@ void *ffrealloc_inline_(
 #define ffrealloc(srcp, size) ffrealloc_inline_((srcp), (size), #srcp, #size, __func__, __LINE__)
 
 // ********
+// ByteArray data
+// ********
+
+typedef struct{
+	size_t		length;
+	uint8_t 	*data;
+}FFByteArray;
+
+void FFByteArray_realloc(FFByteArray *array, size_t length)
+{
+	ASSERT(array);
+	array->data = ffrealloc(array->data, length);
+	array->length = length;
+}
+
+// ********
 // data endian
 // ********
 
