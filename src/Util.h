@@ -103,19 +103,6 @@ void DUMPUint16Ntohs_inline_(uint16_t *array16, size_t array16Num)
 	DEBUG_LOG("DUMPUint16:`" #buf "`[`" #size "`]:"); DUMPUint16Ntohs_inline_((buf), (size));
 
 // ********
-// string util
-// ********
-
-#define sprintf_new(res, fmt, ...) \
-	do{ \
-		ASSERT(0 < strlen(fmt)); \
-		size_t n = snprintf(NULL, 0, fmt, ## __VA_ARGS__); \
-		ASSERT(0 < n); \
-		res = (char *)ffmalloc(n + 1); \
-		snprintf(res, n+1, fmt, ## __VA_ARGS__); \
-	}while(0);
-
-// ********
 // memory allocate
 // ********
 
@@ -146,6 +133,29 @@ void *ffrealloc_inline_(
 	return dstp;
 }
 #define ffrealloc(srcp, size) ffrealloc_inline_((srcp), (size), #srcp, #size, __func__, __LINE__)
+
+// ********
+// string util
+// ********
+#include <stdarg.h>
+char* ffsprintf_new(const char* format, ...)
+{
+	char dummy[1];
+
+	va_list ap;
+	va_start(ap, format);
+	size_t n = vsnprintf(dummy, sizeof(dummy), format, ap);
+	va_end(ap);
+
+	char *buffer = (char *)ffmalloc(n + 1);
+
+	//va_list ap;
+	va_start(ap, format);
+	vsprintf(buffer, format, ap);
+	va_end(ap);
+
+	return buffer;
+}
 
 // ********
 // ByteArray data

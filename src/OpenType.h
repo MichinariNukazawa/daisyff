@@ -460,15 +460,9 @@ NameTableBuf NameTableBuf_init(
 	// NameTable.NameRecord[](および.stringstrage)にNameRecord_Menberを追加。
 	const char *macStyleString = MacStyle_toStringForNameTable(macStyle);
 	ASSERT(macStyleString);
-	char *appfullfontname = NULL;
-	sprintf_new(appfullfontname, "%s %s %s", vendorname, fontname, macStyleString);
-	ASSERT(appfullfontname);
-	char *humanfullfontname = NULL;
-	sprintf_new(humanfullfontname, "%s %s", fontname, macStyleString);
-	ASSERT(humanfullfontname);
-	char *postscriptfontname = NULL;
-	sprintf_new(postscriptfontname, "%s-%s", fontname, macStyleString);
-	ASSERT(postscriptfontname);
+	const char *appfullfontname		= ffsprintf_new("%s %s %s", vendorname, fontname, macStyleString);
+	const char *humanfullfontname		= ffsprintf_new("%s %s", fontname, macStyleString);
+	const char *postscriptfontname		= ffsprintf_new("%s-%s", fontname, macStyleString);
 	ASSERTF(PostScriptName_valid(postscriptfontname), "`%s`", postscriptfontname);
 	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  0, copyright);
 	NameTableBuf_append(&nameTableBuf, PlatformID_Unicode, EncodingID_Unicode_0, 0x0,  1, fontname);
