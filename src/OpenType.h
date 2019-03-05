@@ -32,6 +32,8 @@ typedef uint8_t  Uint8Type;
 typedef int16_t  Int16Type;
 typedef uint16_t Uint16Type;
 typedef uint32_t Uint32Type;
+typedef int16_t  FwordType;
+typedef uint16_t UfwordType;
 typedef uint32_t TagType;
 typedef uint32_t FixedType;
 typedef uint64_t LONGDATETIMEType;
@@ -178,7 +180,7 @@ typedef struct{
 	int16_t			yMax;
 }BBox;
 
-BBox BBox_generate(int16_t xMin, int16_t yMin, int16_t xMax, int16_t yMax)
+BBox BBox_generate(int16_t xMin, int16_t xMax, int16_t yMin, int16_t yMax)
 {
 	ASSERT(xMin < xMax);
 	ASSERT(yMin < yMax);
@@ -929,6 +931,100 @@ void GlyphTablesBuf_init(GlyphTablesBuf *glyphTablesBuf)
 
 }
 
+typedef struct{
+	Uint16Type	majorVersion		; // |set to 1.(Table Major version)
+	Uint16Type	minorVersion		; // |set to 0.(Table Minor version)
+	FwordType	ascender		; // |アセンダ(baseline基準)
+	FwordType	descender		; // |ディセンダ(baseline基準)
+	FwordType	lineGap			; // |ラインギャップ(CapHeight - XHeight)※
+	UfwordType	advanceWidthMax		; // |HmtxTable内で最大の文字幅(advance width value)
+	FwordType	minLeftSideBearing	; // |HmtxTable内で最小の左Sidebearing
+	FwordType	minRightSideBearing	; // |HmtxTable内で最小の右Sidebearing
+	FwordType	xMaxExtent		; // |Max(lsb + (xMax - xMin)).
+	Int16Type	caretSlopeRise		; // |(カーソルの傾きがどうこうと書いてある。とりあえず1にしておけばよい)
+	Int16Type	caretSlopeRun		; // |(説明が略されている。とりあえず0にしておけばよい)
+	Int16Type	caretOffset		; // |(斜体のハイライトの見栄えが云々。斜体でない書体は0にしておけばよい)
+	Int16Type	reserved0		; // |set to 0
+	Int16Type	reserved1		; // |set to 0
+	Int16Type	reserved2		; // |set to 0
+	Int16Type	reserved3		; // |set to 0
+	Int16Type	metricDataFormat	; // |0 for current format.
+	Uint16Type	numberOfHMetrics	; // |HmtxTableのhMetric要素の数。
+}HheaTable;
+
+void HheaTable_init(
+		HheaTable *hheaTable,
+		size_t ascender,
+		size_t descender,
+		size_t lineGap,
+		size_t advanceWidthMax,
+		size_t minLeftSideBearing,
+		size_t minRightSideBearing,
+		size_t xMaxExtent,
+		size_t numberOfHMetrics)
+{
+	*hheaTable = (HheaTable){
+		.majorVersion		= htons(1),
+		.minorVersion		= htons(0),
+		.ascender		= htons((uint16_t)ascender	),
+		.descender		= htons((uint16_t)descender	),
+		.lineGap		= htons((uint16_t)lineGap		),
+		.advanceWidthMax	= htons((uint16_t)advanceWidthMax	),
+		.minLeftSideBearing	= htons((uint16_t)minLeftSideBearing	),
+		.minRightSideBearing	= htons((uint16_t)minRightSideBearing	),
+		.xMaxExtent		= htons((uint16_t)xMaxExtent		),
+		.caretSlopeRise		= htons(1),
+		.caretSlopeRun		= htons(0),
+		.caretOffset		= htons(0),
+		.reserved0		= htons(0),
+		.reserved1		= htons(0),
+		.reserved2		= htons(0),
+		.reserved3		= htons(0),
+		.metricDataFormat	= htons(0),
+		.numberOfHMetrics	= htons((uint16_t)numberOfHMetrics	),
+	};
+}
+
+typedef struct{
+	Uint16Type	advanceWidth;
+	Int16Type	lsb;
+}HmtxTable_LongHorMetric_Member;
+
+typedef struct{
+	HmtxTable_LongHorMetric_Member *longHorMetrics_Host;
+	size_t numberOfHMetrics;
+	size_t advanceWidthMax;
+	//
+	FFByteArray byteArray;
+}HmtxTableBuf;
+
+void HmtxTableBuf_appendLongHorMetric(HmtxTableBuf *hmtxTableBuf, size_t advanceWidth, size_t lsb)
+{
+	if(hmtxTableBuf->advanceWidthMax < advanceWidth){
+		hmtxTableBuf->advanceWidthMax = advanceWidth;
+	}
+
+	hmtxTableBuf->longHorMetrics_Host = (HmtxTable_LongHorMetric_Member *)realloc(
+					hmtxTableBuf->longHorMetrics_Host,
+					sizeof(HmtxTable_LongHorMetric_Member) * (hmtxTableBuf->numberOfHMetrics + 1));
+	hmtxTableBuf->longHorMetrics_Host[hmtxTableBuf->numberOfHMetrics] = (HmtxTable_LongHorMetric_Member){
+		.advanceWidth	= advanceWidth,
+		.lsb		= lsb,
+	};
+	(hmtxTableBuf->numberOfHMetrics)++;
+}
+
+void HmtxTableBuf_finally(HmtxTableBuf *hmtxTableBuf)
+{
+	for(int i = 0; i < hmtxTableBuf->numberOfHMetrics; i++){
+		HmtxTable_LongHorMetric_Member host = hmtxTableBuf->longHorMetrics_Host[i];
+		HmtxTable_LongHorMetric_Member longHorMetric = {
+			.advanceWidth	= htons(host.advanceWidth	),
+			.lsb		= htons(host.lsb		),
+		};
+		FFByteArray_append(&hmtxTableBuf->byteArray, &longHorMetric, sizeof(HmtxTable_LongHorMetric_Member));
+	}
+}
 
 typedef struct{
 	Uint32Type	sfntVersion;

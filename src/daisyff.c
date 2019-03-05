@@ -45,6 +45,7 @@ int main(int argc, char **argv)
 	/**
 	  'head' Table
 	  */
+	BBox bBox = BBox_generate(50, 400, -300, (1000 - 300));
 	HeadTable headTable;
 	HeadTableFlagsElement	flags = (HeadTableFlagsElement)(0x0
 			& HeadTableFlagsElement_Bit5_isRegardingInApplePlatform
@@ -60,7 +61,7 @@ int main(int argc, char **argv)
 			LONGDATETIMEType_generate(timeFromStr("2019-01-01T00:00:00+00:00")),
 			LONGDATETIMEType_generate(timeFromStr("2019-01-01T00:00:00+00:00")),
 			(MacStyle)MacStyle_Bit6_Regular,
-			BBox_generate(0,0, 1000, 1000),
+			bBox,
 			8
 			));
 
@@ -84,37 +85,65 @@ int main(int argc, char **argv)
 	  */
 	GlyphTablesBuf glyphTablesBuf;
 	GlyphTablesBuf_init(&glyphTablesBuf);
+	HheaTable hheaTable = {0};
+	HmtxTableBuf hmtxTableBuf = {0};
+
+	size_t advanceWidth = 500;
+	size_t lsb = 50;
 	{
 		// ** .notdefなどデフォルトの文字を追加
 		//    & CmapTableテーブルにGlyphIdの初期値をセット
 		//! @note Format0のBackspaceなどへのGlyphIdの割り当てはFontForgeの出力ファイルに倣った
-		// .notdef
+		// *** .notdef
 		GlyphDescriptionBuf glyphDescriptionBuf_notdef = {0};
 		GlyphOutline outline_notdef = GlyphOutline_Notdef();
 		GlyphDescriptionBuf_setOutline(&glyphDescriptionBuf_notdef, &outline_notdef);
 		GlyphTablesBuf_appendSimpleGlyph(&glyphTablesBuf, 0x0, &glyphDescriptionBuf_notdef);
+		HmtxTableBuf_appendLongHorMetric(&hmtxTableBuf, advanceWidth, lsb);
 
 		// 下の2つのGlyphで使用する空の字形
 		GlyphDescriptionBuf glyphDescriptionBuf_empty = {0};
 		GlyphOutline outline_empty = {0};
 		GlyphDescriptionBuf_setOutline(&glyphDescriptionBuf_empty, &outline_empty);
-		// NUL and other
+		// *** NUL and other
 		GlyphTablesBuf_appendSimpleGlyph(&glyphTablesBuf, 0, &glyphDescriptionBuf_empty);
 		glyphTablesBuf.cmapSubtableBuf_GlyphIdArray8[ 8] = 1; // BackSpace = index 1
 		glyphTablesBuf.cmapSubtableBuf_GlyphIdArray8[29] = 1; // GroupSeparator = index 1
-		// TAB(HT) and other
+		HmtxTableBuf_appendLongHorMetric(&hmtxTableBuf, 0, 0);
+		// *** TAB(HT) and other
 		GlyphTablesBuf_appendSimpleGlyph(&glyphTablesBuf, '\t', &glyphDescriptionBuf_empty);
 		glyphTablesBuf.cmapSubtableBuf_GlyphIdArray8[13] = 1; // CR = index 2
+		HmtxTableBuf_appendLongHorMetric(&hmtxTableBuf, 1000, 0);
 
 		// ** 目的の字形・文字を追加していく
 		GlyphDescriptionBuf glyphDescriptionBuf_A = {0};
 		GlyphOutline outline_A = GlyphOutline_A();
 		GlyphDescriptionBuf_setOutline(&glyphDescriptionBuf_A, &outline_A);
 		GlyphTablesBuf_appendSimpleGlyph(&glyphTablesBuf, 'A', &glyphDescriptionBuf_A);
+		HmtxTableBuf_appendLongHorMetric(&hmtxTableBuf, advanceWidth, lsb);
 
-		// **
+		// ** 追加終了して集計・ByteArray化する。
 		GlyphTablesBuf_finally(&glyphTablesBuf);
 	}
+	{
+		size_t ascender			= 1000 - 300;
+		size_t descender		= 300;
+		size_t lineGap			= 24;
+		size_t minLeftSideBearing	= lsb;
+		size_t minRightSideBearing	= lsb;
+		size_t xMaxExtent		= lsb + (bBox.xMax - bBox.xMin);
+		HheaTable_init(
+				&hheaTable,
+				ascender,
+				descender,
+				lineGap,
+				hmtxTableBuf.advanceWidthMax,
+				minLeftSideBearing,
+				minRightSideBearing,
+				xMaxExtent,
+				hmtxTableBuf.numberOfHMetrics);
+	}
+	HmtxTableBuf_finally(&hmtxTableBuf);
 
 	/**
 	'maxp' Table:
@@ -140,6 +169,8 @@ int main(int argc, char **argv)
 	Tablebuf_appendTable(&tableBuf, "cmap", (void *)(glyphTablesBuf.cmapByteArray.data), glyphTablesBuf.cmapByteArray.length);
 	Tablebuf_appendTable(&tableBuf, "loca", (void *)(glyphTablesBuf.locaData), glyphTablesBuf.locaDataSize);
 	Tablebuf_appendTable(&tableBuf, "glyf", (void *)(glyphTablesBuf.glyfData), glyphTablesBuf.glyfDataSize);
+	Tablebuf_appendTable(&tableBuf, "hhea", (void *)(&hheaTable), sizeof(HheaTable));
+	Tablebuf_appendTable(&tableBuf, "hmtx", (void *)(hmtxTableBuf.byteArray.data), hmtxTableBuf.byteArray.length);
 
 	// offsetは、Tableのフォントファイル先頭からのオフセット。先に計算しておく。
 	const size_t offsetHeadSize = sizeof(OffsetTable) + (sizeof(TableDirectory_Member) * tableBuf.appendTableNum);
