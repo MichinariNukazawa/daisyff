@@ -84,13 +84,37 @@ int main(int argc, char **argv)
 	  */
 	GlyphTablesBuf glyphTablesBuf;
 	GlyphTablesBuf_init(&glyphTablesBuf);
+	{
+		// ** .notdefなどデフォルトの文字を追加
+		//    & CmapTableテーブルにGlyphIdの初期値をセット
+		//! @note Format0のBackspaceなどへのGlyphIdの割り当てはFontForgeの出力ファイルに倣った
+		// .notdef
+		GlyphDescriptionBuf glyphDescriptionBuf_notdef = {0};
+		GlyphOutline outline_notdef = GlyphOutline_Notdef();
+		GlyphDescriptionBuf_setOutline(&glyphDescriptionBuf_notdef, &outline_notdef);
+		GlyphTablesBuf_appendSimpleGlyph(&glyphTablesBuf, 0x0, &glyphDescriptionBuf_notdef);
 
-	GlyphDescriptionBuf glyphDescriptionBuf_A = {0};
-	GlyphOutline outline_A = GlyphOutline_A();
-	GlyphDescriptionBuf_generateByteDataWithOutline(&glyphDescriptionBuf_A, &outline_A);
+		// 下の2つのGlyphで使用する空の字形
+		GlyphDescriptionBuf glyphDescriptionBuf_empty = {0};
+		GlyphOutline outline_empty = {0};
+		GlyphDescriptionBuf_setOutline(&glyphDescriptionBuf_empty, &outline_empty);
+		// NUL and other
+		GlyphTablesBuf_appendSimpleGlyph(&glyphTablesBuf, 0, &glyphDescriptionBuf_empty);
+		glyphTablesBuf.cmapSubtableBuf_GlyphIdArray8[ 8] = 1; // BackSpace = index 1
+		glyphTablesBuf.cmapSubtableBuf_GlyphIdArray8[29] = 1; // GroupSeparator = index 1
+		// TAB(HT) and other
+		GlyphTablesBuf_appendSimpleGlyph(&glyphTablesBuf, '\t', &glyphDescriptionBuf_empty);
+		glyphTablesBuf.cmapSubtableBuf_GlyphIdArray8[13] = 1; // CR = index 2
 
-	GlyphTablesBuf_appendSimpleGlyph(&glyphTablesBuf, 'A', &glyphDescriptionBuf_A);
-	GlyphTablesBuf_finally(&glyphTablesBuf);
+		// ** 目的の字形・文字を追加していく
+		GlyphDescriptionBuf glyphDescriptionBuf_A = {0};
+		GlyphOutline outline_A = GlyphOutline_A();
+		GlyphDescriptionBuf_setOutline(&glyphDescriptionBuf_A, &outline_A);
+		GlyphTablesBuf_appendSimpleGlyph(&glyphTablesBuf, 'A', &glyphDescriptionBuf_A);
+
+		// **
+		GlyphTablesBuf_finally(&glyphTablesBuf);
+	}
 
 	/**
 	'maxp' Table:

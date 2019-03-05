@@ -120,7 +120,7 @@ void glyphOutline0_test()
 
 	GlyphDescriptionBuf gdb_ = {0};
 	GlyphDescriptionBuf *gdb = &gdb_;
-	GlyphDescriptionBuf_generateByteDataWithOutline(gdb, &outline);
+	GlyphDescriptionBuf_setOutline(gdb, &outline);
 
 	EXPECT_EQ_UINT(gdb->numberOfContours, 1);
 	//EXPECT_TRUE(gdb->endPoints	!= NULL);
@@ -167,7 +167,7 @@ void glyphDescriptionBufEmpty_test()
 
 	GlyphDescriptionBuf glyphDescriptionBuf = {0};
 	GlyphOutline outline_Empty = {0};
-	GlyphDescriptionBuf_generateByteDataWithOutline(&glyphDescriptionBuf, &outline_Empty);
+	GlyphDescriptionBuf_setOutline(&glyphDescriptionBuf, &outline_Empty);
 
 	EXPECT_EQ_UINT(glyphDescriptionBuf.dataSize, sizeof(dstarray));
 	EXPECT_EQ_ARRAY(glyphDescriptionBuf.data, dstarray, sizeof(dstarray))
@@ -209,7 +209,7 @@ void glyphDescriptionBufNotdefNoCompression_test()
 
 	GlyphDescriptionBuf glyphDescriptionBuf_Notdef = {0};
 	GlyphOutline notdefOutline = GlyphOutline_Notdef();
-	GlyphDescriptionBuf_generateByteDataWithOutline(&glyphDescriptionBuf_Notdef, &notdefOutline);
+	GlyphDescriptionBuf_setOutline(&glyphDescriptionBuf_Notdef, &notdefOutline);
 
 	//DUMP0(glyphDescriptionBuf_Notdef.data, glyphDescriptionBuf_Notdef.dataSize);
 	//DUMP0(dataarray, sizeof(dataarray));
