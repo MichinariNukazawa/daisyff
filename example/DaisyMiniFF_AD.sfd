@@ -1,0 +1,91 @@
+SplineFontDB: 3.0
+FontName: DaisyMiniFF
+FullName: DaisyMiniFF
+FamilyName: Daisy
+Weight: Regular
+Copyright: Copyright (c) 2019, Michinari Nukazawa/project daisy bell
+UComments: "2019-3-7: Created with FontForge (http://fontforge.org)"
+Version: 0.0001
+ItalicAngle: 0
+UnderlinePosition: -99.328
+UnderlineWidth: 50.176
+Ascent: 700
+Descent: 324
+InvalidEm: 0
+LayerCount: 2
+Layer: 0 0 "+gMyXYgAA" 1
+Layer: 1 0 "+Uk2XYgAA" 0
+XUID: [1021 472 2115419283 5828620]
+FSType: 0
+OS2Version: 0
+OS2_WeightWidthSlopeOnly: 0
+OS2_UseTypoMetrics: 1
+CreationTime: 1551960182
+ModificationTime: 1551963104
+PfmFamily: 17
+TTFWeight: 400
+TTFWidth: 5
+LineGap: 94
+VLineGap: 0
+OS2TypoAscent: 0
+OS2TypoAOffset: 1
+OS2TypoDescent: 0
+OS2TypoDOffset: 1
+OS2TypoLinegap: 94
+OS2WinAscent: 0
+OS2WinAOffset: 1
+OS2WinDescent: 0
+OS2WinDOffset: 1
+HheadAscent: 0
+HheadAOffset: 1
+HheadDescent: 0
+HheadDOffset: 1
+OS2Vendor: 'PfEd'
+MarkAttachClasses: 1
+DEI: 91125
+LangName: 1033
+Encoding: ISO8859-1
+UnicodeInterp: none
+NameList: AGL For New Fonts
+DisplaySize: -48
+AntiAlias: 1
+FitToEm: 0
+WinInfo: 64 16 8
+BeginPrivate: 0
+EndPrivate
+TeXData: 1 0 0 346030 173015 115343 0 1048576 115343 783286 444596 497025 792723 393216 433062 380633 303038 157286 324010 404750 52429 2506097 1059062 262144
+BeginChars: 256 2
+
+StartChar: A
+Encoding: 65 65 0
+Width: 499
+VWidth: 0
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+59 0 m 1
+ 258 613 l 29
+ 453 0 l 1
+ 262 96 l 25
+ 59 0 l 1
+EndSplineSet
+Validated: 1
+EndChar
+
+StartChar: D
+Encoding: 68 68 1
+Width: 500
+VWidth: 0
+Flags: HWO
+LayerCount: 2
+Fore
+SplineSet
+66 600 m 1
+ 320 600 459 495 458 304 c 0
+ 457 113 340 0 64 0 c 1
+ 66 600 l 1
+EndSplineSet
+EndChar
+EndChars
+EndSplineFont
