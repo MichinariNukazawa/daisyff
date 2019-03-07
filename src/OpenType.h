@@ -1027,6 +1027,18 @@ void HmtxTableBuf_finally(HmtxTableBuf *hmtxTableBuf)
 }
 
 typedef struct{
+	FixedType	version			;
+	FixedType	italicAngle		;
+	FwordType	underlinePosition	;
+	FwordType	underlineThickness	;
+	Uint32Type	isFixedPitch		;
+	Uint32Type	minMemType42		;
+	Uint32Type	maxMemType42		;
+	Uint32Type	minMemType1		;
+	Uint32Type	maxMemType1		;
+}PostTable_Header;
+
+typedef struct{
 	Uint32Type	sfntVersion;
 	Uint16Type	numTables;
 	Uint16Type	searchRange;

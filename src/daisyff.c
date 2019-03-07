@@ -154,6 +154,17 @@ int main(int argc, char **argv)
 	ASSERT(MaxpTable_Version05_init(&maxpTable_Version05, glyphTablesBuf.numGlyphs));
 
 	/**
+	  'post' Table: PostScriptエンジン(プリンタ等)が使用する参考情報
+	 */
+	PostTable_Header postTable = {
+		.version		= htonl(0x00030000),
+		.italicAngle		= htonl(0x00000000),
+		.underlinePosition	= htons(-125),
+		.underlineThickness	= htons(50),
+		.isFixedPitch		= htons(0x0001),
+	};
+
+	/**
 	TableDiectoryを生成しつつ、Tableをバイト配列に変換して繋げていく。
 		Tableにはパディングを入れる。
 		TableDirectoryを作っていく(Table情報の配列)。
@@ -171,6 +182,7 @@ int main(int argc, char **argv)
 	Tablebuf_appendTable(&tableBuf, "glyf", (void *)(glyphTablesBuf.glyfData), glyphTablesBuf.glyfDataSize);
 	Tablebuf_appendTable(&tableBuf, "hhea", (void *)(&hheaTable), sizeof(HheaTable));
 	Tablebuf_appendTable(&tableBuf, "hmtx", (void *)(hmtxTableBuf.byteArray.data), hmtxTableBuf.byteArray.length);
+	Tablebuf_appendTable(&tableBuf, "post", (void *)(&postTable), sizeof(PostTable_Header));
 
 	// offsetは、Tableのフォントファイル先頭からのオフセット。先に計算しておく。
 	const size_t offsetHeadSize = sizeof(OffsetTable) + (sizeof(TableDirectory_Member) * tableBuf.appendTableNum);
