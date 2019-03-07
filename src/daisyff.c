@@ -193,8 +193,8 @@ int main(int argc, char **argv)
 	 (Offset Subtable, sfnt)
 	*/
 	Uint32Type sfntVersion;
-	memcpy((uint8_t *)&sfntVersion, "OTTO", 4);
-	//sfntVersion = 0x00010000;
+	//memcpy((uint8_t *)&sfntVersion, "OTTO", 4);
+	sfntVersion = 0x00010000;
 	OffsetTable offsetTable;
 	ASSERT(OffsetTable_init(&offsetTable, sfntVersion, tableBuf.appendTableNum));
 
