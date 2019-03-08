@@ -8,10 +8,31 @@
 #include "include/version.h"
 #include <inttypes.h>
 
+enum{
+	FFStrictMode_NONE = 0,
+	FFStrictMode_ERROR,
+	FFStrictMode_ALL,
+};
+typedef int FFStrictMode;
+
+typedef struct{
+	FFStrictMode		strictMode;
+	char			tablename[5];
+}FfDumpArg;
+FfDumpArg arg = {0};
+
 #define FONT_ERROR_LOG(fmt, ...) \
-	fprintf(stderr, "font error: %s()[%d]: "fmt"\n", __func__, __LINE__, ## __VA_ARGS__)
+	do{ \
+		fprintf(stderr, "font error: %s()[%d]: "fmt"\n", __func__, __LINE__, ## __VA_ARGS__); \
+		if(FFStrictMode_ERROR <= arg.strictMode){ \
+			fprintf(stderr, "exit from strictMode:%d", arg.strictMode); \
+			exit(1); \
+		} \
+	}while(0);
 #define FONT_WARN_LOG(fmt, ...) \
-	fprintf(stderr, "font warning: %s()[%d]: "fmt"\n", __func__, __LINE__, ## __VA_ARGS__)
+	do{ \
+		fprintf(stderr, "font warning: %s()[%d]: "fmt"\n", __func__, __LINE__, ## __VA_ARGS__); \
+	}while(0);
 #define FONT_ASSERT(arg) \
 	do{ \
 		if(!(arg)){ \
@@ -1138,14 +1159,9 @@ void glyfTable(
 	}
 }
 
-typedef struct{
-	char tablename[5];
-}FfDumpArg;
 
 int main(int argc, char **argv)
 {
-	FfDumpArg arg = {0};
-
 	/**
 	第1引数でフォントファイル名を指定する
 	*/
@@ -1155,11 +1171,23 @@ int main(int argc, char **argv)
 	const char *fontfilepath = argv[1];
 
 	// ** 引数：Table指定
-	if(argc >= 4 && (0 == strcmp("-t", argv[2]))){
-		if(4 != strlen(argv[3])){
-			ERROR_LOG("invalid table name");
+	if(argc >= 3){
+		if(0 == strcmp("-t", argv[2])){
+			if(! (argc >= 4)){
+				ERROR_LOG("invalid table name");
+				exit(1);
+			}
+			if(4 != strlen(argv[3])){
+				ERROR_LOG("invalid table name");
+				exit(1);
+			}
+			strcpy(arg.tablename, argv[3]);
+		}else if(0 == strcmp("--strict", argv[2])){
+			arg.strictMode = FFStrictMode_ALL;
+		}else{
+			ERROR_LOG("invalid args");
+			exit(1);
 		}
-		strcpy(arg.tablename, argv[3]);
 	}
 
 	int fd = open(fontfilepath, O_RDONLY, 0777);

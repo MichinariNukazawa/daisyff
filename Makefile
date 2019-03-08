@@ -35,12 +35,16 @@ all: run test dump
 gdb: $(APP)
 	gdb --args $(APP) DaisyMini
 
+.PHONY: utest
+utest: $(APP)
+	./test.exe
+
 test: ./test.exe
 	make clean
-	./test.exe
 	make
 	make dump
-	./daisydump.exe DaisyMini.otf -t cmap
+	make utest
+	./test/test.sh
 
 ./test.exe: test/test.c src/*.h include/*.h
 	gcc $< \
