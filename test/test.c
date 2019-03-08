@@ -155,8 +155,8 @@ void glyphDescriptionBufEmpty_test()
 			0,0, // int16 numberOfContours;
 			0,0, // int16 xMin;
 			0,0, // int16 yMin;
-			0x03,0xe8, // int16 xMax; = 1000
-			0x03,0xe8, // int16 yMax; = 1000
+			0,0, // int16 xMax; = 0 //0x03,0xe8, // int16 xMax; = 1000
+			0,0, // int16 yMax; = 0 //0x03,0xe8, // int16 yMax; = 1000
 			//uint16_t	*endPoints;
 			0,0, //uint16_t	instructionLength;
 			//uint8_t		*instructions;
@@ -169,6 +169,7 @@ void glyphDescriptionBufEmpty_test()
 	GlyphOutline outline_Empty = {0};
 	GlyphDescriptionBuf_setOutline(&glyphDescriptionBuf, &outline_Empty);
 
+	DUMP0(glyphDescriptionBuf.data, glyphDescriptionBuf.dataSize);
 	EXPECT_EQ_UINT(glyphDescriptionBuf.dataSize, sizeof(dstarray));
 	EXPECT_EQ_ARRAY(glyphDescriptionBuf.data, dstarray, sizeof(dstarray))
 
@@ -181,10 +182,10 @@ void glyphDescriptionBufNotdefNoCompression_test()
 
 	uint16_t dataarray0[] = {
 			2, // int16 numberOfContours;
-			0, // int16 xMin;
-			0, // int16 yMin;
-			1000, // int16 xMax; = 1000
-			1000, // int16 yMax; = 1000
+			 50, // int16 xMin;
+			100, // int16 yMin;
+			450, // int16 xMax;
+			600, // int16 yMax;
 			3, 7, //uint16_t	*endPoints;
 			0x0000, //uint16_t	instructionLength;
 			//uint8_t		*instructions;

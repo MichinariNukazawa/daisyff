@@ -532,6 +532,28 @@ void GlyphDescriptionBuf_setOutline(
 		endPoints[l] = pointNum - 1;
 	}
 
+	// ** 字形のBBoxサイズを取得
+	//! @todo 本当は曲線による塗りつぶし範囲を取らなければならないはず
+	//! @todo 将来的にはGlyphOutline.hに担当を移す
+	BBox bbox = {0}; //!< @todo アウトラインの無い字形はゼロでいいのか？
+	for(int l = 0; l < outline->closePathNum; l++){
+		const GlyphClosePath *closePath = &(outline->closePaths[l]);
+		for(int ai = 0; ai < closePath->anchorPointNum; ai++){
+			const GlyphAnchorPoint *ap = &(closePath->anchorPoints[ai]);
+			if(0 == l && 0 == ai){
+				bbox.xMin = (ap->point).x;
+				bbox.yMin = (ap->point).y;
+				bbox.xMax = (ap->point).x;
+				bbox.yMax = (ap->point).y;
+			}else{
+				bbox.xMin = ((bbox.xMin < (ap->point).x)? bbox.xMin : (ap->point).x);
+				bbox.yMin = ((bbox.yMin < (ap->point).y)? bbox.yMin : (ap->point).y);
+				bbox.xMax = ((bbox.xMax > (ap->point).x)? bbox.xMax : (ap->point).x);
+				bbox.yMax = ((bbox.yMax > (ap->point).y)? bbox.yMax : (ap->point).y);
+			}
+		}
+	}
+
 	// ** flags,x,yCoodinates収集を行う // @todo 短縮・SHORT_VECTOR
 	uint8_t *flags = ffmalloc(sizeof(uint8_t) * pointNum);
 	int16_t *xCoodinates = ffmalloc(sizeof(int16_t) * pointNum);
@@ -568,10 +590,10 @@ void GlyphDescriptionBuf_setOutline(
 
 	GlyphDescriptionHeader glyphDescriptionHeader = {
 		.numberOfContours	= htons(glyphDescriptionBuf->numberOfContours),
-		.xMin			= htons(0),
-		.yMin			= htons(0),
-		.xMax			= htons(1000),
-		.yMax			= htons(1000),
+		.xMin			= htons(bbox.xMin),
+		.yMin			= htons(bbox.yMin),
+		.xMax			= htons(bbox.xMax),
+		.yMax			= htons(bbox.yMax),
 	};
 
 	size_t offset = 0;
