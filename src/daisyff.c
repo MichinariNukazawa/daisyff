@@ -33,6 +33,8 @@ int main(int argc, char **argv)
 	}
 	const char *fontname = argv[1];
 
+	int baseline = 300;
+
 	/**
 	CFF(OpenType)(MSSPEC)の要求する以下の必須テーブルを作成していく。
 	cmap, head, hhea, hmtx, maxp, name, OS/2, post
@@ -45,7 +47,7 @@ int main(int argc, char **argv)
 	/**
 	  'head' Table
 	  */
-	BBox bBox = BBox_generate(50, 400, -300, (1000 - 300));
+	BBox bBox = BBox_generate(50, 450, - baseline, 1000 - baseline); // 値は一応のデザインルールから仮の値
 	HeadTable headTable;
 	HeadTableFlagsElement	flags = (HeadTableFlagsElement)(0x0
 			& HeadTableFlagsElement_Bit5_isRegardingInApplePlatform
@@ -126,8 +128,8 @@ int main(int argc, char **argv)
 		GlyphTablesBuf_finally(&glyphTablesBuf);
 	}
 	{
-		size_t ascender			= 1000 - 300;
-		size_t descender		= 300;
+		size_t ascender			= 1000 - baseline;
+		size_t descender		= baseline;
 		size_t lineGap			= 24;
 		size_t minLeftSideBearing	= lsb;
 		size_t minRightSideBearing	= lsb;
