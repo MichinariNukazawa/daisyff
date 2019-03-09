@@ -1,5 +1,19 @@
 
+.*
+!.gitkeep
+!.gitignore
+tags
+# patch command backup file
+*.rej
+*.orig
+# cash
+*~
+#
+*.back
+
+
 *.otf
+*.ttf
 *.exe
 
 *.d
