@@ -162,7 +162,7 @@ int main(int argc, char **argv)
 		.italicAngle		= htonl(0x00000000),
 		.underlinePosition	= htons(-125),
 		.underlineThickness	= htons(50),
-		.isFixedPitch		= htons(0x0001),
+		.isFixedPitch		= htonl(0x00000001),
 	};
 
 	/**
