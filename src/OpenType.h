@@ -767,7 +767,7 @@ FFByteArray CmapTable_CmapSubtable_Format4_generateByteDataWithGlyphIdArray16(
 		segmentBufs[segCount] = (CmapSubtable_Format4_SegmentBuf){
 			.startCode	= 0xffff,
 			.endCode	= 0xffff,
-			.idDelta	= 0,
+			.idDelta	= 1,
 			.idRangeOffset	= 0,
 		};
 		segCount++;
