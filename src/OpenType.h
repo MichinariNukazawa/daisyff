@@ -148,14 +148,14 @@ enum HeadTableFlagsElement_Bit{
 	HeadTableFlagsElement_Bit11_isLosslessCompress			= (0x1 << 11),
 	/** MSSPECに"Font converted"としか書いていないため不明。
 	  AppleSPECにはAdobe定義と書いてあってリンク切れしてる。
-	  とりあずNotoに習ってON(1)
+	  NotoやFontForgeで生成したファイルではON(1)になっている
 	  */
 	HeadTableFlagsElement_Bit12_isFontConverted			= (0x1 << 12),
-	//! ClearType(アンチエイリアシング) // bitmapフォント等で無効にする場合が有る
+	//! ClearType(アンチエイリアシング)可能 // bitmapフォント等では無効にする場合が有る
 	HeadTableFlagsElement_Bit13_isClearType				= (0x1 << 13),
 	//! glyphの並びをCodePoint順にする
 	HeadTableFlagsElement_Bit14_isResortforCodePoint		= (0x1 << 14),
-	//! Bit 15 zero予約
+	//! Bit 15 zero予約(FontForgeで生成したファイルではON(1)になっているようだが...)
 };
 typedef uint16_t HeadTableFlagsElement;
 

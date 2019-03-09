@@ -50,11 +50,10 @@ int main(int argc, char **argv)
 	BBox bBox = BBox_generate(50, 450, - baseline, 1000 - baseline); // 値は一応のデザインルールから仮の値
 	HeadTable headTable;
 	HeadTableFlagsElement	flags = (HeadTableFlagsElement)(0x0
-			& HeadTableFlagsElement_Bit5_isRegardingInApplePlatform
-			& HeadTableFlagsElement_Bit11_isLosslessCompress
-			& HeadTableFlagsElement_Bit12_isFontConverted
-			& HeadTableFlagsElement_Bit13_isClearType
-			& HeadTableFlagsElement_Bit14_isResortforCodePoint
+			//| HeadTableFlagsElement_Bit0_isBaselineAtYIsZero
+			| HeadTableFlagsElement_Bit1_isLeftSidebearingPointAtXIsZero
+			//| HeadTableFlagsElement_Bit3_isPpemScalerMath
+			//| HeadTableFlagsElement_Bit13_isClearType
 			);
 	ASSERT(HeadTable_init(
 			&headTable,
