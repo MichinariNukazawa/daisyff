@@ -822,8 +822,7 @@ typedef struct{
 	uint8_t			*cmapSubtableBuf_GlyphIdArray8;		//!< `glyphId = array[codepoint=0-255]`
 	uint16_t		*cmapSubtableBuf_GlyphIdArray16;	//!< `glyphId = array[codepoint=0-65535]`
 	FFByteArray		cmapByteArray;
-	uint8_t			*locaData;
-	size_t			locaDataSize;
+	FFByteArray		locaByteArray;
 	uint8_t			*glyfData;
 	size_t			glyfDataSize;
 }GlyphTablesBuf;
@@ -852,14 +851,12 @@ void GlyphTablesBuf_appendSimpleGlyph(
 	// ** 'loca' Table
 	// 'loca' Tableのoffsetsの型はHeadTable.indexToLocFormatにより指定。
 	size_t newsize = sizeof(Offset32Type) * (glyphTablesBuf->numGlyphs + 2);
-	glyphTablesBuf->locaData = realloc(glyphTablesBuf->locaData, newsize);
-	ASSERT(glyphTablesBuf->locaData);
+	FFByteArray_realloc(&(glyphTablesBuf->locaByteArray), newsize);
 	// 先頭オフセット(初回先頭がゼロ。以降前回の末尾オフセットがあれば同じ値で上書きされる)
-	Offset32Type *loca = (Offset32Type *)(glyphTablesBuf->locaData);
+	Offset32Type *loca = (Offset32Type *)(glyphTablesBuf->locaByteArray.data);
 	loca[glyphTablesBuf->numGlyphs + 0] = htonl(glyphTablesBuf->glyfDataSize - glyphDescriptionBuf->dataSize);
 	// 末尾オフセット
 	loca[glyphTablesBuf->numGlyphs + 1] = htonl(glyphTablesBuf->glyfDataSize);
-	glyphTablesBuf->locaDataSize = newsize;
 
 	// ** 'cmap' Table
 	ASSERT(glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8);
@@ -939,8 +936,6 @@ void GlyphTablesBuf_init(GlyphTablesBuf *glyphTablesBuf)
 	*glyphTablesBuf = (GlyphTablesBuf){
 		.glyphDescriptionBufs	= NULL,
 		.numGlyphs		= 0,
-		.locaData		= NULL,
-		.locaDataSize		= 0,
 		.glyfData		= NULL,
 		.glyfDataSize		= 0,
 	};

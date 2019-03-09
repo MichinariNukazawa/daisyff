@@ -179,7 +179,7 @@ int main(int argc, char **argv)
 	Tablebuf_appendTable(&tableBuf, "name", (void *)(nameTableBuf.data), nameTableBuf.dataSize);
 	Tablebuf_appendTable(&tableBuf, "maxp", (void *)(&maxpTable_Version05), sizeof(MaxpTable_Version05));
 	Tablebuf_appendTable(&tableBuf, "cmap", (void *)(glyphTablesBuf.cmapByteArray.data), glyphTablesBuf.cmapByteArray.length);
-	Tablebuf_appendTable(&tableBuf, "loca", (void *)(glyphTablesBuf.locaData), glyphTablesBuf.locaDataSize);
+	Tablebuf_appendTable(&tableBuf, "loca", (void *)(glyphTablesBuf.locaByteArray.data), glyphTablesBuf.locaByteArray.length);
 	Tablebuf_appendTable(&tableBuf, "glyf", (void *)(glyphTablesBuf.glyfData), glyphTablesBuf.glyfDataSize);
 	Tablebuf_appendTable(&tableBuf, "hhea", (void *)(&hheaTable), sizeof(HheaTable));
 	Tablebuf_appendTable(&tableBuf, "hmtx", (void *)(hmtxTableBuf.byteArray.data), hmtxTableBuf.byteArray.length);
