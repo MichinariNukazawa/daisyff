@@ -169,6 +169,7 @@ typedef struct{
 void FFByteArray_realloc(FFByteArray *array, size_t length)
 {
 	ASSERT(array);
+	ASSERT(array->length < length);
 	array->data = ffrealloc(array->data, length);
 	array->length = length;
 }
