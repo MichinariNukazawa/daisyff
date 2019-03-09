@@ -246,7 +246,7 @@ bool HeadTable_init(
 		.macStyle		= htons(macStyle),
 		.lowestRecPPEM		= htons(lowestRecPPEM),
 		.fontDirectionHint	= htons(2),
-		.indexToLocFormat	= htons(1),	// 'loca' Table要素サイズ(1==Offset32)
+		.indexToLocFormat	= htons(0),	// 'loca' Table要素サイズ(1==Offset32)
 		.glyphDataFormat	= htons(0),	// 0固定
 	};
 	*headTable_ = headTable;
@@ -850,13 +850,32 @@ void GlyphTablesBuf_appendSimpleGlyph(
 
 	// ** 'loca' Table
 	// 'loca' Tableのoffsetsの型はHeadTable.indexToLocFormatにより指定。
-	size_t newsize = sizeof(Offset32Type) * (glyphTablesBuf->numGlyphs + 2);
-	FFByteArray_realloc(&(glyphTablesBuf->locaByteArray), newsize);
-	// 先頭オフセット(初回先頭がゼロ。以降前回の末尾オフセットがあれば同じ値で上書きされる)
-	Offset32Type *loca = (Offset32Type *)(glyphTablesBuf->locaByteArray.data);
-	loca[glyphTablesBuf->numGlyphs + 0] = htonl(glyphTablesBuf->glyfDataSize - glyphDescriptionBuf->dataSize);
-	// 末尾オフセット
-	loca[glyphTablesBuf->numGlyphs + 1] = htonl(glyphTablesBuf->glyfDataSize);
+#if 0
+	{
+		size_t newsize = sizeof(Offset32Type) * (glyphTablesBuf->numGlyphs + 2);
+		FFByteArray_realloc(&(glyphTablesBuf->locaByteArray), newsize);
+		// 先頭オフセット(初回先頭がゼロ。以降前回の末尾オフセットがあれば同じ値で上書きされる)
+		Offset32Type *loca = (Offset32Type *)(glyphTablesBuf->locaByteArray.data);
+		loca[glyphTablesBuf->numGlyphs + 0]
+			= htonl(glyphTablesBuf->glyfDataSize - glyphDescriptionBuf->dataSize);
+		// 末尾オフセット
+		loca[glyphTablesBuf->numGlyphs + 1]
+			= htonl(glyphTablesBuf->glyfDataSize);
+	}
+#endif
+#if 1
+	{
+		size_t newsize = sizeof(Offset16Type) * (glyphTablesBuf->numGlyphs + 2);
+		FFByteArray_realloc(&(glyphTablesBuf->locaByteArray), newsize);
+		// 先頭オフセット(初回先頭がゼロ。以降前回の末尾オフセットがあれば同じ値で上書きされる)
+		Offset16Type *loca = (Offset16Type *)(glyphTablesBuf->locaByteArray.data);
+		loca[glyphTablesBuf->numGlyphs + 0]
+			= htons((glyphTablesBuf->glyfDataSize - glyphDescriptionBuf->dataSize) / 2);
+		// 末尾オフセット
+		loca[glyphTablesBuf->numGlyphs + 1]
+			= htons(glyphTablesBuf->glyfDataSize / 2);
+	}
+#endif
 
 	// ** 'cmap' Table
 	ASSERT(glyphTablesBuf->cmapSubtableBuf_GlyphIdArray8);
