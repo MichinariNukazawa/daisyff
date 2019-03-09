@@ -46,6 +46,8 @@ test:
 	make dump
 	make utest
 	./test/test.sh
+	# strict check DaisyMini.otf
+	./daisydump.exe DaisyMini.otf --strict > /dev/null
 
 ./test.exe: test/test.c src/*.h include/*.h
 	gcc $< \
