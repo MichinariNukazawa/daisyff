@@ -32,14 +32,15 @@ run: $(APP)
 
 all: run test dump
 
+.PHONY: gdb
 gdb: $(APP)
 	gdb --args $(APP) DaisyMini
 
 .PHONY: utest
-utest: $(APP)
+utest: ./test.exe
 	./test.exe
 
-test: ./test.exe
+test:
 	make clean
 	make
 	make dump
@@ -74,8 +75,10 @@ $(APP): src/daisyff.c src/*.h include/*.h
 
 clean:
 	rm -rf $(OBJECT_DIR)
-	rm -rf $(APP) *.otf
 	rm -rf *.d
+	rm -rf $(APP)
+	rm -rf *.exe
+	rm -rf *.otf
 
 -include $(DEPENDS)
 
