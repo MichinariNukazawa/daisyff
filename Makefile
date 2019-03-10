@@ -82,5 +82,11 @@ clean:
 	rm -rf *.exe
 	rm -rf *.otf
 
+clean-ttx:
+	- find . -name "*\.ttx" -type f | xargs rm
+	- rm -f *.ttf
+	- rm -f example/*.ttf
+	git checkout example/*.ttf
+
 -include $(DEPENDS)
 
