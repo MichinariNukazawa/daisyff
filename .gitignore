@@ -3,36 +3,39 @@
 !.gitkeep
 !.gitignore
 tags
+
 # patch command backup file
 *.rej
 *.orig
+*.diff
+*.patch
+
 # cash
 *~
-#
-*.back
+*.swp
+/.vscode
 
-
+# generated
+*.ttx
 *.otf
 *.ttf
 *.exe
 
+# object
 *.d
 *.o
 
-*.swp
-*.patch
-
+# object
 /obj
 /object
-/work
-/tmp
-/gabage
-/log
 
-/.vscode
+# work
+*.back
+/work*
+/tmp*
+/gabage*
+/log*
 
+# work
 /*-book
-
-#
-*.ttx
 
