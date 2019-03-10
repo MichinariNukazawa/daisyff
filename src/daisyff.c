@@ -151,8 +151,29 @@ int main(int argc, char **argv)
 	 使用グリフ数。
 	 TrueType必須Table。
 	*/
+#if 0
 	MaxpTable_Version05 maxpTable_Version05;
 	ASSERT(MaxpTable_Version05_init(&maxpTable_Version05, glyphTablesBuf.numGlyphs));
+#endif
+#if 1
+	MaxpTable_Version10 maxpTable_Version10 = {
+		.version		= (FixedType)htonl(0x00010000),
+		.numGlyphs		= htons(glyphTablesBuf.numGlyphs),
+		.maxPoints		= htons(8), // @todo 以下はFF由来の仮の固定値
+		.maxContours		= htons(2),
+		.maxCompositePoints	= htons(0),
+		.maxCompositeContours	= htons(0),
+		.maxZones		= htons(2),
+		.maxTwilightPoints	= htons(0),
+		.maxStorage		= htons(1),
+		.maxFunctionDefs	= htons(1),
+		.maxInstructionDefs	= htons(0),
+		.maxStackElements	= htons(64),
+		.maxSizeOfInstructions	= htons(0),
+		.maxComponentElements	= htons(0),
+		.maxComponentDepth	= htons(0),
+	};
+#endif
 
 	/**
 	  'post' Table: PostScriptエンジン(プリンタ等)が使用する参考情報
@@ -177,7 +198,7 @@ int main(int argc, char **argv)
 	//Tablebuf_appendTable(&tableBuf, (void *)(&offsetTable), sizeof(OffsetTable));
 	Tablebuf_appendTable(&tableBuf, "head", (void *)(&headTable), sizeof(HeadTable));
 	Tablebuf_appendTable(&tableBuf, "name", (void *)(nameTableBuf.data), nameTableBuf.dataSize);
-	Tablebuf_appendTable(&tableBuf, "maxp", (void *)(&maxpTable_Version05), sizeof(MaxpTable_Version05));
+	Tablebuf_appendTable(&tableBuf, "maxp", (void *)(&maxpTable_Version10), sizeof(MaxpTable_Version10));
 	Tablebuf_appendTable(&tableBuf, "cmap", (void *)(glyphTablesBuf.cmapByteArray.data), glyphTablesBuf.cmapByteArray.length);
 	Tablebuf_appendTable(&tableBuf, "loca", (void *)(glyphTablesBuf.locaByteArray.data), glyphTablesBuf.locaByteArray.length);
 	Tablebuf_appendTable(&tableBuf, "glyf", (void *)(glyphTablesBuf.glyfData), glyphTablesBuf.glyfDataSize);

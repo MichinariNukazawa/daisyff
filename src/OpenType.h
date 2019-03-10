@@ -259,6 +259,24 @@ typedef struct{
 	Uint16Type	numGlyphs;
 }MaxpTable_Version05;
 
+typedef struct{
+	FixedType	version;
+	Uint16Type	numGlyphs;
+	Uint16Type	maxPoints		;
+	Uint16Type	maxContours		;
+	Uint16Type	maxCompositePoints	;
+	Uint16Type	maxCompositeContours	;
+	Uint16Type	maxZones		;
+	Uint16Type	maxTwilightPoints	;
+	Uint16Type	maxStorage		;
+	Uint16Type	maxFunctionDefs		;
+	Uint16Type	maxInstructionDefs	;
+	Uint16Type	maxStackElements	;
+	Uint16Type	maxSizeOfInstructions	;
+	Uint16Type	maxComponentElements	;
+	Uint16Type	maxComponentDepth	;
+}MaxpTable_Version10;
+
 bool MaxpTable_Version05_init(MaxpTable_Version05 *maxpTable_Version05_, unsigned int numGlyphs)
 {
 	ASSERT(maxpTable_Version05_);
